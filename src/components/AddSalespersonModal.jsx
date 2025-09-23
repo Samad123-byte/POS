@@ -1,3 +1,4 @@
+// AddSalespersonModal.jsx - Fixed to not set edit date on creation
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
@@ -43,30 +44,11 @@ const AddSalespersonModal = ({ isOpen, onClose, onAdd, existingSalespersons }) =
         return;
       }
 
-      const newSalesperson = {
-        id: getNextId(), // Auto-generated unique ID
-        name: formData.name,
-        code: formData.code,
-        enteredDate: new Date().toLocaleString('en-GB', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit'
-        }),
-        editDate: ''
-      };
-      onAdd(newSalesperson);
+      // Just call the backend handler - don't create local object
+      // The backend handler will properly handle the creation and state update
+      onAdd(formData);
       setFormData({ name: '', code: '' });
       onClose();
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Salesperson added successfully!',
-        timer: 1500,
-        showConfirmButton: false
-      });
     }
   };
 

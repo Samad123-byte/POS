@@ -26,13 +26,6 @@ const Salespersons = ({ salespersons, onAddSalesperson, onUpdateSalesperson, onD
     }).then((result) => {
       if (result.isConfirmed) {
         onDeleteSalesperson(salespersonId);
-        Swal.fire({
-          icon: 'success',
-          title: 'Deleted!',
-          text: 'Salesperson has been deleted.',
-          timer: 1500,
-          showConfirmButton: false
-        });
       }
     });
   };
@@ -85,7 +78,7 @@ const Salespersons = ({ salespersons, onAddSalesperson, onUpdateSalesperson, onD
                 {salesperson.editDate ? (
                   <span className="text-green-600 font-medium">{salesperson.editDate}</span>
                 ) : (
-                  <span className="text-gray-400 italic">Not edited</span>
+                  <span className="text-gray-400 italic">➖➖</span> 
                 )}
               </td>
               <td className="border border-gray-300 px-4 py-3">

@@ -30,14 +30,16 @@ const useSales = () => {
               total: sale.Total,
               salespersonName: salesperson?.Name || 'Unknown',
               salespersonId: sale.SalespersonId, // Store the actual ID for updates
-              editDate: sale.UpdatedDate ? new Date(sale.UpdatedDate).toLocaleString('en-GB', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-              }) : null,
+              editDate: (sale.UpdatedDate && 
+                        new Date(sale.UpdatedDate).getTime() !== new Date(sale.SaleDate).getTime()) 
+                        ? new Date(sale.UpdatedDate).toLocaleString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                          }) : null, // Use null instead of empty string for consistency
               comments: sale.Comments || '',
               items: saleDetails.map(detail => {
                 const product = productsData.find(p => p.ProductId === detail.ProductId);
@@ -59,7 +61,7 @@ const useSales = () => {
               total: sale.Total,
               salespersonName: 'Unknown',
               salespersonId: sale.SalespersonId,
-              editDate: '',
+              editDate: null,
               comments: sale.Comments || '',
               items: []
             };
@@ -107,7 +109,7 @@ const useSales = () => {
 
       await saleDetailService.createMultipleSaleDetails(saleDetails);
 
-      // Add to local state
+      // Add to local state without editDate since it's a new sale
       const newSale = {
         id: createdSale.SaleId,
         saleTime: new Date(createdSale.SaleDate).toLocaleString('en-GB', {
@@ -121,7 +123,7 @@ const useSales = () => {
         total: createdSale.Total,
         salespersonName: salesperson.name,
         salespersonId: salesperson.id,
-        editDate: '',
+        editDate: null, // Set to null for new sales
         comments: createdSale.Comments || '',
         items: sale.items
       };

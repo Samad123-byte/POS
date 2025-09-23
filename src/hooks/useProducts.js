@@ -20,14 +20,17 @@ const useProducts = () => {
       minute: '2-digit',
       second: '2-digit'
     }),
-    editDate: product.UpdatedDate ? new Date(product.UpdatedDate).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }) : null
+    // Only show edit date if UpdatedDate exists AND it's different from CreationDate
+    editDate: (product.UpdatedDate && 
+              new Date(product.UpdatedDate).getTime() !== new Date(product.CreationDate).getTime()) 
+              ? new Date(product.UpdatedDate).toLocaleString('en-GB', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                }) : null
   });
 
   const loadProducts = async () => {
@@ -75,7 +78,7 @@ const useProducts = () => {
   const handleUpdateProduct = async (updatedProduct) => {
     try {
       const creationDateISO = updatedProduct.creationDate ? 
-        new Date(updatedProduct.creationDate.split(' ').join('T')).toISOString() :
+        new Date(updatedProduct.creationDate.replace(/(\d{2})\/(\d{2})\/(\d{4}), (.*)/, '$3-$2-$1T$4')).toISOString() :
         new Date().toISOString();
 
       const backendProduct = {
@@ -88,6 +91,7 @@ const useProducts = () => {
       
       await productService.updateProduct(updatedProduct.id, backendProduct);
       
+      // Only set edit date when actually updating an existing product
       const updatedProductWithNewEditDate = {
         ...updatedProduct,
         editDate: new Date().toLocaleString('en-GB', {

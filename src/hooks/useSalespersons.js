@@ -18,14 +18,17 @@ const useSalespersons = () => {
       minute: '2-digit',
       second: '2-digit'
     }),
-    editDate: salesperson.UpdatedDate ? new Date(salesperson.UpdatedDate).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    }) : null
+    // Only show edit date if UpdatedDate exists AND it's different from EnteredDate
+    editDate: (salesperson.UpdatedDate && 
+              new Date(salesperson.UpdatedDate).getTime() !== new Date(salesperson.EnteredDate).getTime()) 
+              ? new Date(salesperson.UpdatedDate).toLocaleString('en-GB', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                }) : null
   });
 
   const loadSalespersons = async () => {
@@ -86,6 +89,7 @@ const useSalespersons = () => {
       
       await salespersonService.updateSalesperson(updatedSalesperson.id, backendSalesperson);
       
+      // Only set edit date when actually updating an existing salesperson
       const updatedSalespersonWithNewEditDate = {
         ...updatedSalesperson,
         editDate: new Date().toLocaleString('en-GB', {

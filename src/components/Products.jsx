@@ -172,7 +172,13 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
               <td className="border border-gray-300 px-4 py-3">{product.costPrice}</td>
               <td className="border border-gray-300 px-4 py-3">{product.retailPrice}</td>
               <td className="border border-gray-300 px-4 py-3">{product.creationDate}</td>
-              <td className="border border-gray-300 px-4 py-3">{product.editDate || '--'}</td>
+              <td className="border border-gray-300 px-4 py-3">
+                {product.editDate ? (
+                  <span className="text-green-600 font-medium">{product.editDate}</span>
+                ) : (
+                  <span className="text-gray-400 italic">➖➖</span>
+                )}
+              </td>
               <td className="border border-gray-300 px-4 py-3">
                 <div className="flex gap-2">
                   <button 

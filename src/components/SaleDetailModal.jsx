@@ -218,20 +218,19 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
   if (!isOpen || !sale) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden border border-gray-200 transform transition-all duration-300">
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-4 flex justify-between items-center shadow-lg">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-3">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-            <h3 className="text-xl font-bold">Sale Details</h3>
-            <div className="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
-              ID: #{sale.id}
+            <h3 className="text-lg font-bold">Sale Details - ID: #{sale.id}</h3>
+            <div className="bg-white bg-opacity-20 px-2 py-1 rounded text-sm">
+              Total: ${editedSale?.total?.toFixed(2) || '0.00'}
             </div>
           </div>
           <button 
             onClick={onClose} 
-            className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-all duration-200 text-xl font-bold"
+            className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-1 transition-all duration-200 text-lg font-bold w-8 h-8 flex items-center justify-center"
             title="Close (ESC)"
           >
             ×
@@ -239,128 +238,98 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* Sale Information Grid */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
-            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <div className="w-4 h-4 bg-blue-500 rounded mr-2"></div>
-              Sale Information
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">Sale Time:</label>
-                <input 
-                  type="text" 
-                  value={editedSale?.saleTime || ''}
-                  disabled
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-700 shadow-inner focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">Total Amount:</label>
-                <input 
-                  type="text" 
-                  value={`$${editedSale?.total?.toFixed(2) || '0.00'}`}
-                  disabled
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gradient-to-r from-green-50 to-emerald-50 font-bold text-green-700 text-lg shadow-inner focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">Salesperson:</label>
-                {editMode ? (
-                  <select 
-                    value={editedSale?.salespersonName || ''}
-                    onChange={(e) => setEditedSale({...editedSale, salespersonName: e.target.value})}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
-                  >
-                    {salespersons.map(sp => (
-                      <option key={sp.id} value={sp.name}>{sp.name}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={editedSale?.salespersonName || ''}
-                    disabled
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-700 shadow-inner focus:outline-none"
-                  />
-                )}
-              </div>
-              <div>
-                <label className="block text-gray-700 font-semibold mb-2 text-sm uppercase tracking-wide">Last Edit:</label>
-                <input 
-                  type="text" 
-                  value={editedSale?.editDate || 'Never edited'}
-                  disabled
-                  className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-700 shadow-inner focus:outline-none"
-                />
+        <div className="p-4 overflow-y-auto max-h-[calc(85vh-120px)]">
+          {/* Sale Info - Compact Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Sale Time</label>
+              <div className="text-sm bg-gray-50 p-2 rounded border">{editedSale?.saleTime || ''}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Salesperson</label>
+              {editMode ? (
+                <select 
+                  value={editedSale?.salespersonName || ''}
+                  onChange={(e) => setEditedSale({...editedSale, salespersonName: e.target.value})}
+                  className="w-full text-sm border border-gray-300 rounded p-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  {salespersons.map(sp => (
+                    <option key={sp.id} value={sp.name}>{sp.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <div className="text-sm bg-gray-50 p-2 rounded border">{editedSale?.salespersonName || ''}</div>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Last Edit</label>
+              <div className="text-sm bg-gray-50 p-2 rounded border">{editedSale?.editDate || 'Never edited'}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Items Count</label>
+              <div className="text-sm bg-blue-50 p-2 rounded border font-semibold text-blue-700">
+                {editedSale?.items?.length || 0} items
               </div>
             </div>
           </div>
 
-          {/* Comments Section */}
-          <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
-            <label className="block text-gray-700 font-semibold mb-3 text-sm uppercase tracking-wide flex items-center">
-              <div className="w-4 h-4 bg-purple-500 rounded mr-2"></div>
-              Comments:
-            </label>
+          {/* Comments */}
+          <div className="mb-4">
+            <label className="block text-xs font-semibold text-gray-600 mb-1 uppercase">Comments</label>
             {editMode ? (
               <textarea 
                 value={editedSale?.comments || ''}
                 onChange={(e) => setEditedSale({...editedSale, comments: e.target.value})}
-                className="w-full border border-gray-300 rounded-lg px-4 py-3 h-24 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                className="w-full text-sm border border-gray-300 rounded p-2 h-16 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 placeholder="Add comments about this sale..."
               />
             ) : (
-              <div className="w-full border border-gray-300 rounded-lg px-4 py-3 bg-gray-100 text-gray-700 min-h-[96px] shadow-inner">
+              <div className="text-sm bg-gray-50 p-2 rounded border h-16 overflow-y-auto">
                 {editedSale?.comments || 'No comments added'}
               </div>
             )}
           </div>
 
-          {/* Items Table */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-b border-gray-200">
-              <h4 className="text-lg font-semibold text-gray-800 flex items-center">
-                <div className="w-4 h-4 bg-orange-500 rounded mr-2"></div>
-                Sale Items ({editedSale?.items?.length || 0})
-              </h4>
+          {/* Items Table - Compact */}
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b">
+              <h4 className="text-sm font-semibold text-gray-800">Sale Items</h4>
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full text-sm">
                 <thead className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                   <tr>
-                    <th className="px-6 py-4 text-left font-semibold uppercase tracking-wide text-sm">Code</th>
-                    <th className="px-6 py-4 text-left font-semibold uppercase tracking-wide text-sm">Product Name</th>
-                    <th className="px-6 py-4 text-center font-semibold uppercase tracking-wide text-sm">Quantity</th>
-                    <th className="px-6 py-4 text-center font-semibold uppercase tracking-wide text-sm">Discount</th>
-                    <th className="px-6 py-4 text-right font-semibold uppercase tracking-wide text-sm">Price</th>
-                    <th className="px-6 py-4 text-right font-semibold uppercase tracking-wide text-sm">Amount</th>
-                    {editMode && <th className="px-6 py-4 text-center font-semibold uppercase tracking-wide text-sm">Action</th>}
+                    <th className="px-3 py-2 text-left font-semibold text-xs">Code</th>
+                    <th className="px-3 py-2 text-left font-semibold text-xs">Product</th>
+                    <th className="px-3 py-2 text-center font-semibold text-xs">Qty</th>
+                    <th className="px-3 py-2 text-center font-semibold text-xs">Discount</th>
+                    <th className="px-3 py-2 text-right font-semibold text-xs">Price</th>
+                    <th className="px-3 py-2 text-right font-semibold text-xs">Amount</th>
+                    {editMode && <th className="px-3 py-2 text-center font-semibold text-xs">Action</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {editedSale?.items?.map((item, index) => (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors duration-150">
-                      <td className="px-6 py-4 font-mono text-sm text-gray-900 bg-gray-50">{item.code}</td>
-                      <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
-                      <td className="px-6 py-4 text-center">
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-3 py-2 font-mono text-xs bg-gray-50">{item.code}</td>
+                      <td className="px-3 py-2 text-xs">{item.name}</td>
+                      <td className="px-3 py-2 text-center">
                         {editMode ? (
                           <input
                             type="number"
                             min="0"
                             value={item.quantity}
                             onChange={(e) => updateItemQuantity(index, e.target.value)}
-                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         ) : (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
                             {item.quantity}
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-3 py-2 text-center">
                         {editMode ? (
                           <input
                             type="number"
@@ -369,25 +338,25 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
                             step="0.01"
                             value={item.discount || 0}
                             onChange={(e) => updateItemDiscount(index, e.target.value)}
-                            className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                            className="w-16 px-2 py-1 text-xs border border-gray-300 rounded text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                           />
                         ) : (
-                          <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                          <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                             (item.discount || 0) > 0 ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800'
                           }`}>
                             {item.discount || 0}%
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right font-medium text-gray-900">${item.price}</td>
-                      <td className="px-6 py-4 text-right font-bold text-lg text-green-700">
+                      <td className="px-3 py-2 text-right text-xs">${item.price}</td>
+                      <td className="px-3 py-2 text-right font-bold text-xs text-green-700">
                         ${item.amount.toFixed(2)}
                       </td>
                       {editMode && (
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 py-2 text-center">
                           <button
                             onClick={() => removeItem(index)}
-                            className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-full text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
+                            className="inline-flex items-center px-2 py-1 text-xs font-medium rounded text-white bg-red-500 hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                             title="Remove item"
                           >
                             ×
@@ -400,12 +369,9 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
               </table>
               
               {(!editedSale?.items || editedSale.items.length === 0) && (
-                <div className="text-center py-12 text-gray-500">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <div className="w-8 h-8 border-2 border-gray-300 rounded"></div>
-                  </div>
-                  <p className="text-lg font-medium">No items found</p>
-                  <p className="text-sm">This sale doesn't have any items yet</p>
+                <div className="text-center py-8 text-gray-500">
+                  <div className="text-lg font-medium">No items found</div>
+                  <div className="text-sm">This sale doesn't have any items</div>
                 </div>
               )}
             </div>
@@ -413,20 +379,17 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
         </div>
 
         {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-between items-center">
-          <div className="text-sm text-gray-500">
-            Press <kbd className="px-2 py-1 bg-gray-200 rounded text-xs font-mono">ESC</kbd> to close
+        <div className="bg-gray-50 px-6 py-3 border-t border-gray-200 flex justify-between items-center">
+          <div className="text-xs text-gray-500">
+            Press <kbd className="px-1 py-0.5 bg-gray-200 rounded text-xs">ESC</kbd> to close
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             {editMode ? (
               <>
                 <button 
                   onClick={handleUpdate}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
                   Save Changes
                 </button>
                 <button 
@@ -434,7 +397,7 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
                     setEditMode(false);
                     setEditedSale({...originalSale});
                   }}
-                  className="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
                   Cancel
                 </button>
@@ -443,25 +406,19 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
               <>
                 <button 
                   onClick={() => setEditMode(true)}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
-                  </svg>
                   Edit Sale
                 </button>
                 <button 
                   onClick={handleDelete}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-200"
                 >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                  </svg>
                   Delete Sale
                 </button>
                 <button 
                   onClick={onClose}
-                  className="inline-flex items-center px-6 py-3 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all duration-200"
                 >
                   Close
                 </button>

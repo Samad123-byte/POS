@@ -1,3 +1,4 @@
+// AddProductModal.jsx - Fixed to not set edit date on creation
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
@@ -60,18 +61,11 @@ const AddProductModal = ({ isOpen, onClose, onAdd, existingProducts }) => {
           minute: '2-digit',
           second: '2-digit'
         }),
-        editDate: ''
+        editDate: null // Set to null for new products, only set when actually edited
       };
       onAdd(newProduct);
       setFormData({ name: '', code: '', costPrice: '', retailPrice: '' });
       onClose();
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Product added successfully!',
-        timer: 1500,
-        showConfirmButton: false
-      });
     }
   };
 

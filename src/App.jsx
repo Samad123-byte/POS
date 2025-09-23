@@ -13,6 +13,16 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Real-time clock update
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   // Custom hooks for managing state and operations
   const {
@@ -190,12 +200,15 @@ const App = () => {
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-600">
-                {new Date().toLocaleDateString('en-GB', { 
+                {currentTime.toLocaleDateString('en-GB', { 
                   weekday: 'long',
                   year: 'numeric', 
                   month: 'long', 
                   day: 'numeric'
                 })}
+              </div>
+              <div className="text-sm text-blue-600 font-mono bg-blue-50 px-3 py-1 rounded-lg">
+                {currentTime.toLocaleTimeString('en-GB')}
               </div>
               <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm font-medium">A</span>
@@ -221,6 +234,7 @@ const App = () => {
                 products={products}
                 salespersons={salespersons}
                 onSaveSale={handleSaveSale}
+                currentTime={currentTime}
               />
             )}
             
