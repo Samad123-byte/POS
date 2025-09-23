@@ -12,17 +12,16 @@ const useProducts = () => {
     code: product.Code,
     costPrice: product.CostPrice,
     retailPrice: product.RetailPrice,
-    creationDate: new Date(product.CreationDate).toLocaleString('en-GB', {
+    creationDate: product.CreationDate ? new Date(product.CreationDate).toLocaleString('en-GB', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit'
-    }),
-    // Only show edit date if UpdatedDate exists AND it's different from CreationDate
-    editDate: (product.UpdatedDate && 
-              new Date(product.UpdatedDate).getTime() !== new Date(product.CreationDate).getTime()) 
+    }) : null,
+    // Only show edit date if UpdatedDate exists AND it's not null
+    editDate: (product.UpdatedDate && product.UpdatedDate !== null) 
               ? new Date(product.UpdatedDate).toLocaleString('en-GB', {
                   day: '2-digit',
                   month: '2-digit',
@@ -56,7 +55,8 @@ const useProducts = () => {
       const createdProduct = await productService.createProduct(backendProduct);
       const newProduct = transformProduct(createdProduct);
       
-      setProducts(prev => [...prev, newProduct]);
+   setProducts([newProduct, ...products]);
+
       
       Swal.fire({
         icon: 'success',

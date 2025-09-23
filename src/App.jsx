@@ -4,7 +4,7 @@ import Sales from './components/Sales';
 import Records from './components/Records';
 import Salespersons from './components/Salespersons';
 import useProducts from './hooks/useProducts';
-import useSalespersons from './hooks/useSalesPersons';
+   import useSalespersons from './hooks/useSalespersons';
 import useSales from './hooks/useSales';
 import Swal from 'sweetalert2';
 
