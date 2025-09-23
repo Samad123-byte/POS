@@ -221,7 +221,7 @@ const SaleDetailModal = ({ isOpen, onClose, sale, products, salespersons, onUpda
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-6 py-3 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-blue px-6 py-3 flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <h3 className="text-lg font-bold">Sale Details - ID: #{sale.id}</h3>
             <div className="bg-white bg-opacity-20 px-2 py-1 rounded text-sm">

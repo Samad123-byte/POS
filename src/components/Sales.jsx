@@ -203,8 +203,8 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
   };
 
   const getSortIcon = (field) => {
-    if (sortField !== field) return 'Ã¢â€ â€¢';
-    return sortOrder === 'asc' ? 'Ã¢â€ â€˜' : 'Ã¢â€ â€œ';
+    if (sortField !== field) return '';
+    return sortOrder === 'asc' ? '' : '';
   };
 
   const filteredProducts = products.filter(product => 
