@@ -142,7 +142,7 @@ const useSalespersons = () => {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to delete salesperson. Please try again.',
+        text: 'Cannot delete salesperson. This salesperson has associated sales records in the database. Please reassign or delete the sales first before removing this salesperson..',
       });
     }
   };

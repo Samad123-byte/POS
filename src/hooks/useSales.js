@@ -247,7 +247,7 @@ const useSales = () => {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to delete sale. Please try again.',
+        text: 'Cannot delete sale details. These records may be referenced by other transactions in the database..',
       });
     }
   };

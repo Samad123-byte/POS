@@ -120,7 +120,7 @@ const useProducts = () => {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to update product. Please try again.',
+        text: 'Failed to update product.',
       });
     }
   };
@@ -142,7 +142,7 @@ const useProducts = () => {
       Swal.fire({
         icon: 'error',
         title: 'Error',
-        text: 'Failed to delete product. Please try again.',
+        text: 'Cannot delete product. This product is referenced in existing sale details. Please remove it from all sales before deleting the product..',
       });
     }
   };
