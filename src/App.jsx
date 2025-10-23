@@ -26,21 +26,23 @@ const App = () => {
   }, []);
 
   // Custom hooks for managing state and operations
-  const {
-    products,
-    loadProducts,
-    handleAddProduct,
-    handleUpdateProduct,
-    handleDeleteProduct
-  } = useProducts();
+ const {
+  products,
+  rawProducts, // ✅ ADD THIS LINE
+  loadProducts,
+  handleAddProduct,
+  handleUpdateProduct,
+  handleDeleteProduct
+} = useProducts();
 
-  const {
-    salespersons,
-    loadSalespersons,
-    handleAddSalesperson,
-    handleUpdateSalesperson,
-    handleDeleteSalesperson
-  } = useSalespersons();
+const {
+  salespersons,
+  rawSalespersons, // ✅ ADD THIS LINE
+  loadSalespersons,
+  handleAddSalesperson,
+  handleUpdateSalesperson,
+  handleDeleteSalesperson
+} = useSalespersons();
 
   const {
     sales,
@@ -56,36 +58,30 @@ const App = () => {
   }, []);
 
   const loadAllData = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      const [productsData, salespersonsData] = await Promise.all([
-        loadProducts(),
-        loadSalespersons()
-      ]);
+  setLoading(true);
+  setError(null);
+  
+  try {
+    // ✅ Load products and salespersons (returns both transformed and raw data)
+    const [productsResult, salespersonsResult] = await Promise.all([
+      loadProducts(),
+      loadSalespersons()
+    ]);
 
-      // Load sales with details using raw backend data for proper linking
-      const productsBackendData = await import('./services/productService').then(service => 
-        service.productService.getAllProducts()
-      );
-      const salespersonsBackendData = await import('./services/salespersonService').then(service => 
-        service.salespersonService.getAllSalespersons()
-      );
-      
-      await loadSales(productsBackendData, salespersonsBackendData);
-    } catch (err) {
-      console.error('Error loading data:', err);
-      setError(err.message);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error Loading Data',
-        text: 'Failed to load data from server. Please check your connection and try again.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    // ✅ Use the raw data that was already loaded - NO duplicate API calls!
+    await loadSales(productsResult.raw, salespersonsResult.raw);
+  } catch (err) {
+    console.error('Error loading data:', err);
+    setError(err.message);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error Loading Data',
+      text: 'Failed to load data from server. Please check your connection and try again.',
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Wrapper functions to maintain the same interface
   const handleSaveSale = (sale, isEdit) => {

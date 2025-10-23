@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 
 const useSalespersons = () => {
   const [salespersons, setSalespersons] = useState([]);
+    const [rawSalespersons, setRawSalespersons] = useState([]);
 
   const transformSalesperson = (salesperson) => ({
     id: salesperson.SalespersonId,
@@ -31,17 +32,18 @@ const useSalespersons = () => {
                 }) : null
   });
 
-  const loadSalespersons = async () => {
-    try {
-      const salespersonsData = await salespersonService.getAllSalespersons();
-      const transformedData = salespersonsData.map(transformSalesperson);
-      setSalespersons(transformedData);
-      return transformedData;
-    } catch (error) {
-      console.error('Error loading salespersons:', error);
-      throw error;
-    }
-  };
+const loadSalespersons = async () => {
+  try {
+    const salespersonsData = await salespersonService.getAllSalespersons();
+    setRawSalespersons(salespersonsData); // ✅ ADD THIS LINE
+    const transformedData = salespersonsData.map(transformSalesperson);
+    setSalespersons(transformedData);
+    return { transformed: transformedData, raw: salespersonsData }; // ✅ CHANGE THIS LINE
+  } catch (error) {
+    console.error('Error loading salespersons:', error);
+    throw error;
+  }
+};
 
   const handleAddSalesperson = async (salesperson) => {
     try {
@@ -148,12 +150,15 @@ const useSalespersons = () => {
   };
 
   return {
-    salespersons,
-    setSalespersons,
-    loadSalespersons,
-    handleAddSalesperson,
-    handleUpdateSalesperson,
-    handleDeleteSalesperson
+
+  salespersons,
+  rawSalespersons, // ✅ ADD THIS LINE
+  setSalespersons,
+  loadSalespersons,
+  handleAddSalesperson,
+  handleUpdateSalesperson,
+  handleDeleteSalesperson
+
   };
 };
 

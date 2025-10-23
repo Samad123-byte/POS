@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 
 const useProducts = () => {
   const [products, setProducts] = useState([]);
+    const [rawProducts, setRawProducts] = useState([]);
 
   const transformProduct = (product) => ({
     id: product.ProductId,
@@ -32,16 +33,18 @@ const useProducts = () => {
                 }) : null
   });
 
-  const loadProducts = async () => {
-    try {
-      const productsData = await productService.getAllProducts();
-      setProducts(productsData.map(transformProduct));
-      return productsData.map(transformProduct);
-    } catch (error) {
-      console.error('Error loading products:', error);
-      throw error;
-    }
-  };
+const loadProducts = async () => {
+  try {
+    const productsData = await productService.getAllProducts();
+    setRawProducts(productsData); // ✅ ADD THIS LINE
+    const transformed = productsData.map(transformProduct);
+    setProducts(transformed);
+    return { transformed, raw: productsData }; // ✅ CHANGE THIS LINE
+  } catch (error) {
+    console.error('Error loading products:', error);
+    throw error;
+  }
+};
 
   const handleAddProduct = async (product) => {
     try {
@@ -149,11 +152,12 @@ const useProducts = () => {
 
   return {
     products,
-    setProducts,
-    loadProducts,
-    handleAddProduct,
-    handleUpdateProduct,
-    handleDeleteProduct
+  rawProducts, // ✅ ADD THIS LINE
+  setProducts,
+  loadProducts,
+  handleAddProduct,
+  handleUpdateProduct,
+  handleDeleteProduct
   };
 };
 
