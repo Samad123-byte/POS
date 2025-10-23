@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Swal from 'sweetalert2';
 
-const Sales = ({ products, salespersons, onSaveSale }) => {
+const Sales = ({ products, salespersons, onSaveSale, editingSale, onClearEdit }) => {
   const [selectedSalesperson, setSelectedSalesperson] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [cartItems, setCartItems] = useState([]);
@@ -12,6 +12,28 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [sortField, setSortField] = useState('name');
   const [sortOrder, setSortOrder] = useState('asc');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [editingSaleId, setEditingSaleId] = useState(null);
+
+  // Load editing sale data when editingSale prop changes
+  useEffect(() => {
+    if (editingSale) {
+      const salesperson = salespersons.find(sp => sp.name === editingSale.salespersonName);
+      setSelectedSalesperson(salesperson ? salesperson.id.toString() : '');
+      setCartItems([...editingSale.items]);
+      setComments(editingSale.comments || '');
+      setIsEditMode(true);
+      setEditingSaleId(editingSale.id);
+      
+      Swal.fire({
+        icon: 'info',
+        title: 'Editing Sale',
+        text: `Now editing Sale #${editingSale.id}`,
+        timer: 2000,
+        showConfirmButton: false
+      });
+    }
+  }, [editingSale, salespersons]);
 
   // ESC key handler
   useEffect(() => {
@@ -25,7 +47,6 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
 
     if (showProductModal) {
       document.addEventListener('keydown', handleKeyDown);
-      // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -56,7 +77,6 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
       }]);
     }
     
-    // Show success feedback
     Swal.fire({
       icon: 'success',
       title: 'Product Added!',
@@ -69,7 +89,6 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
         container: 'swal2-top-end-container'
       },
       didOpen: () => {
-        // Ensure the toast has highest z-index and no blur
         const swalContainer = document.querySelector('.swal2-top-end-container');
         if (swalContainer) {
           swalContainer.style.zIndex = '999999';
@@ -80,7 +99,6 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
       }
     });
     
-    // Only close modal and clear search if it's from the dropdown search
     if (closeModal) {
       setProductSearch('');
       setShowProductModal(false);
@@ -152,8 +170,8 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
     }
     
     const sale = {
-      id: Date.now(),
-      saleTime: new Date().toLocaleString('en-GB', { 
+      id: isEditMode ? editingSaleId : Date.now(),
+      saleTime: isEditMode ? editingSale.saleTime : new Date().toLocaleString('en-GB', { 
         day: '2-digit', 
         month: '2-digit', 
         year: 'numeric', 
@@ -163,16 +181,23 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
       }),
       total: getTotal(),
       salespersonName: salespersons.find(sp => sp.id === parseInt(selectedSalesperson))?.name || '',
-      editDate: '',
+      editDate: isEditMode ? new Date().toLocaleString('en-GB', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric', 
+        hour: '2-digit', 
+        minute: '2-digit',
+        second: '2-digit'
+      }) : '',
       comments,
       items: [...cartItems]
     };
     
-    onSaveSale(sale);
+    onSaveSale(sale, isEditMode);
     Swal.fire({
       icon: 'success',
       title: 'Success!',
-      text: 'Sale saved successfully!',
+      text: isEditMode ? 'Sale updated successfully!' : 'Sale saved successfully!',
       timer: 2000,
       showConfirmButton: false
     });
@@ -184,6 +209,31 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
     setCartItems([]);
     setComments('');
     setProductSearch('');
+    setIsEditMode(false);
+    setEditingSaleId(null);
+    if (onClearEdit) onClearEdit();
+  };
+
+  const handleCancelEdit = () => {
+    Swal.fire({
+      title: 'Cancel Editing?',
+      text: "Any changes will be lost!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, cancel it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        handleNewSale();
+        Swal.fire({
+          icon: 'info',
+          title: 'Editing Cancelled',
+          timer: 1500,
+          showConfirmButton: false
+        });
+      }
+    });
   };
 
   const closeModal = () => {
@@ -204,7 +254,7 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
 
   const getSortIcon = (field) => {
     if (sortField !== field) return '';
-    return sortOrder === 'asc' ? '' : '';
+    return sortOrder === 'asc' ? '↑' : '↓';
   };
 
   const filteredProducts = products.filter(product => 
@@ -212,7 +262,6 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
     product.code.toLowerCase().includes(productSearch.toLowerCase())
   );
 
-  // Modal products filtering, sorting and pagination
   const modalFilteredProducts = products
     .filter(product => 
       product.name.toLowerCase().includes(modalProductSearch.toLowerCase()) ||
@@ -222,11 +271,9 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
       let aValue, bValue;
       
       if (sortField === 'retailPrice') {
-        // Handle numeric sorting for retailPrice
         aValue = parseFloat(a[sortField]) || 0;
         bValue = parseFloat(b[sortField]) || 0;
       } else {
-        // Handle string sorting for code and name (case insensitive)
         aValue = (a[sortField] || '').toString().toLowerCase();
         bValue = (b[sortField] || '').toString().toLowerCase();
       }
@@ -254,7 +301,16 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
   return (
     <>
       <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-center text-indigo-700 mb-6">POINT OF SALE</h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-center text-indigo-700">
+            {isEditMode ? `EDITING SALE #${editingSaleId}` : 'POINT OF SALE'}
+          </h2>
+          {isEditMode && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-2 rounded">
+              <p className="font-bold">Edit Mode Active</p>
+            </div>
+          )}
+        </div>
         
         <div className="flex justify-between mb-6">
           <div className="flex gap-4 items-center">
@@ -286,7 +342,7 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md transition-colors duration-200 flex items-center justify-center"
                 title="Select Product"
               >
-               🛒
+                🛒
               </button>
               {productSearch && !showProductModal && (
                 <div className="absolute top-full left-0 w-64 bg-white border border-gray-300 rounded-md mt-1 max-h-40 overflow-y-auto z-10 shadow-lg">
@@ -399,14 +455,23 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
             onClick={handleSaveSale}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-2 rounded-md hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-semibold"
           >
-            Save Sale
+            {isEditMode ? 'Update Sale' : 'Save Sale'}
           </button>
-          <button 
-            onClick={handleNewSale}
-            className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-2 rounded-md hover:from-green-600 hover:to-teal-600 transition-all duration-200 font-semibold"
-          >
-            New Sale
-          </button>
+          {isEditMode ? (
+            <button 
+              onClick={handleCancelEdit}
+              className="bg-gradient-to-r from-gray-500 to-gray-600 text-white px-6 py-2 rounded-md hover:from-gray-600 hover:to-gray-700 transition-all duration-200 font-semibold"
+            >
+              Cancel Edit
+            </button>
+          ) : (
+            <button 
+              onClick={handleNewSale}
+              className="bg-gradient-to-r from-green-500 to-teal-500 text-white px-6 py-2 rounded-md hover:from-green-600 hover:to-teal-600 transition-all duration-200 font-semibold"
+            >
+              New Sale
+            </button>
+          )}
         </div>
       </div>
 
@@ -425,7 +490,7 @@ const Sales = ({ products, salespersons, onSaveSale }) => {
                   onClick={closeModal}
                   className="text-gray-500 hover:text-gray-700 text-2xl font-bold hover:bg-gray-100 w-8 h-8 rounded-full flex items-center justify-center transition-colors"
                 >
-              ❌
+                  ✕
                 </button>
               </div>
             </div>

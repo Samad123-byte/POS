@@ -19,45 +19,50 @@ const EditProductModal = ({ isOpen, onClose, onUpdate, product, existingProducts
         retailPrice: product.retailPrice.toString()
       };
       setFormData(productData);
-      setOriginalData({...productData}); // Store original for comparison
+      setOriginalData({ ...productData });
     }
   }, [product]);
 
-  // Handle Escape key to close modal
+  // Close modal on Escape key
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === 'Escape' && isOpen) {
         onClose();
       }
     };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
+    if (isOpen) document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
   }, [isOpen, onClose]);
 
   const hasChanges = () => {
     if (!originalData) return false;
-    
     return (
       originalData.name !== formData.name ||
+      originalData.code !== formData.code ||
       originalData.costPrice !== formData.costPrice ||
       originalData.retailPrice !== formData.retailPrice
-      // Note: code is locked, so we don't check it
     );
   };
 
   const handleSubmit = () => {
-    
     if (!formData.name || !formData.code || !formData.costPrice || !formData.retailPrice) {
       Swal.fire({
         icon: 'error',
         title: 'Missing Fields',
-        text: 'Please fill in all required fields!',
+        text: 'Please fill in all required fields!'
+      });
+      return;
+    }
+
+    // ✅ Check for duplicate product codes
+    const duplicate = existingProducts.find(
+      (p) => p.code === formData.code && p.id !== product.id
+    );
+    if (duplicate) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Code',
+        text: 'This product code already exists. Please use a unique code.'
       });
       return;
     }
@@ -76,22 +81,22 @@ const EditProductModal = ({ isOpen, onClose, onUpdate, product, existingProducts
     const updatedProduct = {
       ...product,
       name: formData.name,
-      code: formData.code, // Code is locked but keeping for consistency
+      code: formData.code,
       costPrice: parseFloat(formData.costPrice),
       retailPrice: parseFloat(formData.retailPrice),
-      editDate: new Date().toLocaleString('en-GB', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
+      editDate: new Date().toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
         minute: '2-digit',
         second: '2-digit'
       })
     };
-    
+
     onUpdate(updatedProduct);
     onClose();
-    
+
     Swal.fire({
       icon: 'success',
       title: 'Updated!',
@@ -109,64 +114,70 @@ const EditProductModal = ({ isOpen, onClose, onUpdate, product, existingProducts
         <h3 className="text-xl font-bold mb-4 text-indigo-700">Edit Product</h3>
         <div>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">ID (Locked)</label>
-            <input 
-              type="text" 
+            <label className="block text-gray-700 font-medium mb-1">ID</label>
+            <input
+              type="text"
               value={product?.id || ''}
               disabled
               className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed font-semibold text-blue-600"
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-1">Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Product Name"
             />
           </div>
+
+          {/* ✅ Code is now editable */}
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Code (Locked)</label>
-            <input 
-              type="text" 
+            <label className="block text-gray-700 font-medium mb-1">Code</label>
+            <input
+              type="text"
               value={formData.code}
-              disabled
-              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Product Code"
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-1">Cost Price</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               step="0.01"
               value={formData.costPrice}
-              onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Cost Price"
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-1">Retail Price</label>
-            <input 
-              type="number" 
+            <input
+              type="number"
               step="0.01"
               value={formData.retailPrice}
-              onChange={(e) => setFormData({...formData, retailPrice: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Retail Price"
             />
           </div>
+
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={handleSubmit}
               className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 font-semibold"
             >
               Update
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
             >

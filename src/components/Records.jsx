@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import SaleDetailModal from './SaleDetailModal';
 
-const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, onNewSale }) => {
+const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, onNewSale, onEditSale }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedSale, setSelectedSale] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: 'saleTime', direction: 'desc' }); // Default sort by saleTime descending
+  const [sortConfig, setSortConfig] = useState({ key: 'saleTime', direction: 'desc' });
   const itemsPerPage = 10;
 
   const filteredSales = sales.filter(sale =>
@@ -21,15 +21,12 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      // Handle different data types
       if (sortConfig.key === 'total') {
         aValue = parseFloat(aValue);
         bValue = parseFloat(bValue);
       } else if (sortConfig.key === 'saleTime' || sortConfig.key === 'editDate') {
-        // Convert dates to comparable format - handle null/undefined editDate
         const parseDate = (dateStr) => {
           if (!dateStr || dateStr === '--') return new Date('1900-01-01').getTime();
-          // Convert DD/MM/YYYY, HH:MM:SS format to Date
           const parts = dateStr.match(/(\d{2})\/(\d{2})\/(\d{4}), (\d{2}):(\d{2}):(\d{2})/);
           if (parts) {
             const [, day, month, year, hour, minute, second] = parts;
@@ -41,7 +38,6 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
         aValue = parseDate(aValue);
         bValue = parseDate(bValue);
       } else {
-        // String comparison
         aValue = aValue?.toString().toLowerCase() || '';
         bValue = bValue?.toString().toLowerCase() || '';
       }
@@ -67,7 +63,7 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
       direction = 'desc';
     }
     setSortConfig({ key, direction });
-    setCurrentPage(1); // Reset to first page when sorting
+    setCurrentPage(1);
   };
 
   const getSortIcon = (columnKey) => {
@@ -82,6 +78,11 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
   const handleSaleClick = (sale) => {
     setSelectedSale(sale);
     setShowDetailModal(true);
+  };
+
+  const handleEditSale = (sale) => {
+    setShowDetailModal(false);
+    onEditSale(sale);
   };
 
   return (
@@ -102,7 +103,7 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
           value={searchTerm}
           onChange={(e) => {
             setSearchTerm(e.target.value);
-            setCurrentPage(1); // Reset to first page when searching
+            setCurrentPage(1);
           }}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
         />
@@ -206,10 +207,8 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         sale={selectedSale}
-        products={products}
-        salespersons={salespersons}
-        onUpdateSale={onUpdateSale}
         onDeleteSale={onDeleteSale}
+        onEditSale={handleEditSale}
       />
     </div>
   );

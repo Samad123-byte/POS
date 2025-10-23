@@ -15,32 +15,26 @@ const EditSalespersonModal = ({ isOpen, onClose, onUpdate, salesperson, existing
         code: salesperson.code
       };
       setFormData(salespersonData);
-      setOriginalData({...salespersonData}); // Store original for comparison
+      setOriginalData({ ...salespersonData }); // Store original for comparison
     }
   }, [salesperson]);
 
+  // Handle Escape key
   useEffect(() => {
     const handleEscapeKey = (event) => {
       if (event.key === 'Escape' && isOpen) {
         onClose();
       }
     };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
+    if (isOpen) document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
   }, [isOpen, onClose]);
 
   const hasChanges = () => {
     if (!originalData) return false;
-    
     return (
-      originalData.name !== formData.name
-      // Note: code is locked, so we don't check it
+      originalData.name !== formData.name ||
+      originalData.code !== formData.code
     );
   };
 
@@ -50,6 +44,19 @@ const EditSalespersonModal = ({ isOpen, onClose, onUpdate, salesperson, existing
         icon: 'error',
         title: 'Missing Fields',
         text: 'Please fill in all required fields!',
+      });
+      return;
+    }
+
+    // ✅ Prevent duplicate codes
+    const duplicate = existingSalespersons.find(
+      (sp) => sp.code === formData.code && sp.id !== salesperson.id
+    );
+    if (duplicate) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Code',
+        text: 'This salesperson code already exists. Please use a unique code.',
       });
       return;
     }
@@ -68,20 +75,22 @@ const EditSalespersonModal = ({ isOpen, onClose, onUpdate, salesperson, existing
     const updatedSalesperson = {
       ...salesperson,
       name: formData.name,
-      code: formData.code, // Code is locked but keeping for consistency
+      code: formData.code,
+      // ✅ Fixed date (24-hour format, includes seconds)
       editDate: new Date().toLocaleString('en-GB', { 
         day: '2-digit', 
         month: '2-digit', 
         year: 'numeric', 
         hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
+        minute: '2-digit', 
+        second: '2-digit',
+        hour12: false
       })
     };
-    
+
     onUpdate(updatedSalesperson);
     onClose();
-    
+
     Swal.fire({
       icon: 'success',
       title: 'Updated!',
@@ -99,42 +108,46 @@ const EditSalespersonModal = ({ isOpen, onClose, onUpdate, salesperson, existing
         <h3 className="text-xl font-bold mb-4 text-indigo-700">Edit Salesperson</h3>
         <div>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">ID (Locked)</label>
-            <input 
-              type="text" 
+            <label className="block text-gray-700 font-medium mb-1">ID</label>
+            <input
+              type="text"
               value={salesperson?.id || ''}
               disabled
               className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed font-semibold text-blue-600"
             />
           </div>
+
           <div className="mb-4">
             <label className="block text-gray-700 font-medium mb-1">Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Salesperson Name"
             />
           </div>
+
+          {/* ✅ Code is now editable */}
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Code (Locked)</label>
-            <input 
-              type="text" 
+            <label className="block text-gray-700 font-medium mb-1">Code</label>
+            <input
+              type="text"
               value={formData.code}
-              disabled
-              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed"
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="Salesperson Code"
             />
           </div>
+
           <div className="flex gap-3">
-            <button 
+            <button
               onClick={handleSubmit}
               className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 font-semibold"
             >
               Update
             </button>
-            <button 
+            <button
               onClick={onClose}
               className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
             >

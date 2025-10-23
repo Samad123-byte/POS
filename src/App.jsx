@@ -4,7 +4,7 @@ import Sales from './components/Sales';
 import Records from './components/Records';
 import Salespersons from './components/Salespersons';
 import useProducts from './hooks/useProducts';
-   import useSalespersons from './hooks/useSalespersons';
+import useSalespersons from './hooks/useSalespersons';
 import useSales from './hooks/useSales';
 import Swal from 'sweetalert2';
 
@@ -14,6 +14,7 @@ const App = () => {
   const [error, setError] = useState(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [editingSale, setEditingSale] = useState(null);
 
   // Real-time clock update
   useEffect(() => {
@@ -87,12 +88,30 @@ const App = () => {
   };
 
   // Wrapper functions to maintain the same interface
-  const handleSaveSale = (sale) => saveSale(sale, products, salespersons);
+  const handleSaveSale = (sale, isEdit) => {
+    if (isEdit) {
+      updateSale(sale, products, salespersons);
+    } else {
+      saveSale(sale, products, salespersons);
+    }
+    setEditingSale(null);
+  };
+  
   const handleUpdateSale = (sale) => updateSale(sale, products, salespersons);
   const handleDeleteSale = (saleId) => deleteSale(saleId);
 
   const handleNewSale = () => {
+    setEditingSale(null);
     setActiveTab('sales');
+  };
+
+  const handleEditSale = (sale) => {
+    setEditingSale(sale);
+    setActiveTab('sales');
+  };
+
+  const handleClearEdit = () => {
+    setEditingSale(null);
   };
 
   const menuItems = [
@@ -161,7 +180,12 @@ const App = () => {
             {menuItems.map(item => (
               <li key={item.id}>
                 <button
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => {
+                    if (item.id !== 'sales') {
+                      setEditingSale(null);
+                    }
+                    setActiveTab(item.id);
+                  }}
                   className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
                     activeTab === item.id
                       ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
@@ -234,6 +258,8 @@ const App = () => {
                 products={products}
                 salespersons={salespersons}
                 onSaveSale={handleSaveSale}
+                editingSale={editingSale}
+                onClearEdit={handleClearEdit}
                 currentTime={currentTime}
               />
             )}
@@ -246,6 +272,7 @@ const App = () => {
                 onUpdateSale={handleUpdateSale}
                 onDeleteSale={handleDeleteSale}
                 onNewSale={handleNewSale}
+                onEditSale={handleEditSale}
               />
             )}
             
