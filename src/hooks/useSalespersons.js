@@ -126,28 +126,33 @@ const loadSalespersons = async () => {
   };
 
   const handleDeleteSalesperson = async (salespersonId) => {
-    try {
-      console.log('Attempting to delete salesperson:', salespersonId); // Debug log
-      
-      await salespersonService.deleteSalesperson(salespersonId);
-      setSalespersons(prev => prev.filter(salesperson => salesperson.id !== salespersonId));
+  try {
+    console.log('Attempting to delete salesperson:', salespersonId); // Debug log
+    
+    await salespersonService.deleteSalesperson(salespersonId);
+    setSalespersons(prev => prev.filter(salesperson => salesperson.id !== salespersonId));
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Salesperson has been deleted.',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      console.error('Error deleting salesperson:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Cannot delete salesperson. This salesperson has associated sales records in the database. Please reassign or delete the sales first before removing this salesperson..',
-      });
-    }
-  };
+    Swal.fire({
+      icon: 'success',
+      title: 'Deleted!',
+      text: 'Salesperson has been deleted.',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Error deleting salesperson:', error);
+    
+    // ✅ Extract backend error message
+    const errorMessage = error.response?.data?.message || 
+                        'Cannot delete salesperson. This salesperson has associated sales records in the database. Please reassign or delete the sales first before removing this salesperson.';
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: errorMessage,
+    });
+  }
+};
 
   return {
 

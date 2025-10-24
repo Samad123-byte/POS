@@ -128,27 +128,32 @@ const loadProducts = async () => {
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
-    try {
-      await productService.deleteProduct(productId);
-      setProducts(prev => prev.filter(product => product.id !== productId));
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Product has been deleted.',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      console.error('Error deleting product:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Cannot delete product. This product is referenced in existing sale details. Please remove it from all sales before deleting the product..',
-      });
-    }
-  };
+const handleDeleteProduct = async (productId) => {
+  try {
+    await productService.deleteProduct(productId);
+    setProducts(prev => prev.filter(product => product.id !== productId));
+    
+    Swal.fire({
+      icon: 'success',
+      title: 'Deleted!',
+      text: 'Product has been deleted.',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    
+    // ✅ Extract backend error message
+    const errorMessage = error.response?.data?.message || 
+                        'Cannot delete product. This product is referenced in existing sale details. Please remove it from all sales before deleting the product.';
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: errorMessage,
+    });
+  }
+};
 
   return {
     products,

@@ -276,31 +276,36 @@ const useSales = () => {
     }
   };
 
-  const handleDeleteSale = async (saleId) => {
-    try {
-      // Delete sale details first
-      await saleDetailService.deleteSaleDetailsBySaleId(saleId);
-      // Then delete the sale
-      await salesService.deleteSale(saleId);
-      
-      setSales(prev => prev.filter(sale => sale.id !== saleId));
+const handleDeleteSale = async (saleId) => {
+  try {
+    // Delete sale details first
+    await saleDetailService.deleteSaleDetailsBySaleId(saleId);
+    // Then delete the sale
+    await salesService.deleteSale(saleId);
+    
+    setSales(prev => prev.filter(sale => sale.id !== saleId));
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Deleted!',
-        text: 'Sale has been deleted.',
-        timer: 1500,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      console.error('Error deleting sale:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Cannot delete sale details. These records may be referenced by other transactions in the database.',
-      });
-    }
-  };
+    Swal.fire({
+      icon: 'success',
+      title: 'Deleted!',
+      text: 'Sale has been deleted.',
+      timer: 1500,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Error deleting sale:', error);
+    
+    // ✅ Extract backend error message
+    const errorMessage = error.response?.data?.message || 
+                        'Cannot delete sale details. These records may be referenced by other transactions in the database.';
+    
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: errorMessage,
+    });
+  }
+};
 
   return {
     sales,

@@ -27,13 +27,7 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
     }).then((result) => {
       if (result.isConfirmed) {
         onDeleteProduct(productId);
-        Swal.fire({
-          icon: 'success',
-          title: 'Deleted!',
-          text: 'Product has been deleted.',
-          timer: 1500,
-          showConfirmButton: false
-        });
+       
       }
     });
   };
