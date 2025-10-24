@@ -1,9 +1,10 @@
 import apiClient from './apiClient';
 
 export const productService = {
+  // ✅ Get all
   getAllProducts: async () => {
     try {
-      const response = await apiClient.get('/Products');
+      const response = await apiClient.get('/Products/getAll');
       return response.data;
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -11,9 +12,10 @@ export const productService = {
     }
   },
 
+  // ✅ Get by ID
   getProductById: async (id) => {
     try {
-      const response = await apiClient.get(`/Products/${id}`);
+      const response = await apiClient.get(`/Products/getById/${id}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -21,6 +23,7 @@ export const productService = {
     }
   },
 
+  // ✅ Create
   createProduct: async (product) => {
     try {
       const productData = {
@@ -30,7 +33,7 @@ export const productService = {
         RetailPrice: parseFloat(product.RetailPrice || product.retailPrice),
       };
       
-      const response = await apiClient.post('/Products', productData);
+      const response = await apiClient.post('/Products/create', productData);
       return response.data;
     } catch (error) {
       console.error('Error creating product:', error);
@@ -38,9 +41,9 @@ export const productService = {
     }
   },
 
+  // ✅ Update
   updateProduct: async (id, product) => {
     try {
-      // Ensure we're sending the correct data structure
       const productData = {
         ProductId: parseInt(id),
         Name: product.Name || product.name,
@@ -50,38 +53,23 @@ export const productService = {
         CreationDate: product.CreationDate || product.creationDate || new Date().toISOString(),
       };
       
-      // Use PUT with the ID in the URL and full object in body
-      const response = await apiClient.put(`/Products/${id}`, productData);
-      
-      // Since PUT might return 204 No Content, return the updated data
-      return {
-        ...productData,
-        UpdatedDate: new Date().toISOString()
-      };
+      const response = await apiClient.post('/Products/update', productData);
+      return response.data;
     } catch (error) {
       console.error('Error updating product:', error);
-      // Log the actual request data for debugging
-      console.error('Request data:', {
-        url: `/Products/${id}`,
-        data: product
-      });
       throw new Error(`Failed to update product: ${error.message}`);
     }
   },
 
+  // ✅ Delete
   deleteProduct: async (id) => {
     try {
-      // Make sure ID is properly formatted
-      const productId = parseInt(id);
-      if (isNaN(productId)) {
-        throw new Error('Invalid product ID');
-      }
-      
-      await apiClient.delete(`/Products/${productId}`);
-      return true;
+      const response = await apiClient.post('/Products/delete', id, {
+        headers: { 'Content-Type': 'application/json' },
+      });
+      return response.data;
     } catch (error) {
       console.error('Error deleting product:', error);
-      console.error('Attempting to delete product with ID:', id);
       throw new Error(`Failed to delete product: ${error.message}`);
     }
   },

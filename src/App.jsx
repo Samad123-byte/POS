@@ -52,36 +52,57 @@ const {
     handleDeleteSale: deleteSale
   } = useSales();
 
-  // Load data on component mount
+   // Optimized data loading effect
+ // Optimized data loading effect
   useEffect(() => {
-    loadAllData();
-  }, []);
+    let isMounted = true;
+    setLoading(true);
 
-  const loadAllData = async () => {
-  setLoading(true);
-  setError(null);
-  
-  try {
-    // ✅ Load products and salespersons (returns both transformed and raw data)
-    const [productsResult, salespersonsResult] = await Promise.all([
-      loadProducts(),
-      loadSalespersons()
-    ]);
+    const loadTabData = async () => {
+      try {
+        if (activeTab === 'products' && rawProducts.length === 0) {
+          await loadProducts();
+          if (isMounted) console.log('Products page hit');
+        }
+        else if (activeTab === 'salespersons' && rawSalespersons.length === 0) {
+          await loadSalespersons();
+          if (isMounted) console.log('Salespersons page hit');
+        }
+        else if (activeTab === 'sales' || activeTab === 'records') {
+          // Only load dependencies if missing
+          const loadPromises = [];
+          if (rawProducts.length === 0) loadPromises.push(loadProducts());
+          if (rawSalespersons.length === 0) loadPromises.push(loadSalespersons());
+          await Promise.all(loadPromises);
+          
+          // Load sales only for sales/records tab
+          await loadSales(rawProducts, rawSalespersons);
+          if (isMounted) console.log(`${activeTab} page hit`);
+        }
+      } catch (err) {
+        if (isMounted) {
+          console.error('Error loading tab data:', err);
+          Swal.fire({
+            title: 'Error!',
+            text: 'Failed to load data for the current tab.',
+            icon: 'error',
+            confirmButtonText: 'Ok'
+          });
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
-    // ✅ Use the raw data that was already loaded - NO duplicate API calls!
-    await loadSales(productsResult.raw, salespersonsResult.raw);
-  } catch (err) {
-    console.error('Error loading data:', err);
-    setError(err.message);
-    Swal.fire({
-      icon: 'error',
-      title: 'Error Loading Data',
-      text: 'Failed to load data from server. Please check your connection and try again.',
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+    loadTabData();
+
+    return () => {
+      isMounted = false; // Cleanup on unmount
+    };
+  }, [activeTab]); // Only react to tab changes
+ 
+
+
 
   // Wrapper functions to maintain the same interface
   const handleSaveSale = (sale, isEdit) => {
