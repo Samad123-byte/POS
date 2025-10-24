@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import Records from './components/Records';
@@ -15,6 +15,43 @@ const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [editingSale, setEditingSale] = useState(null);
+  
+  // Track what data has been loaded to prevent duplicate calls
+  const loadedData = useRef({
+    products: false,
+    salespersons: false,
+    sales: false
+  });
+
+  // Custom hooks for managing state and operations
+  const {
+    products,
+    rawProducts,
+    loadProducts,
+    handleAddProduct,
+    handleUpdateProduct,
+    handleDeleteProduct
+  } = useProducts();
+
+  const {
+    salespersons,
+    rawSalespersons,
+    loadSalespersons,
+    handleAddSalesperson,
+    handleUpdateSalesperson,
+    handleDeleteSalesperson
+  } = useSalespersons();
+
+  const {
+    sales,
+    salesBasicList,
+    loadSales,
+    loadSalesBasic,
+    loadSaleDetails,
+    handleSaveSale: saveSale,
+    handleUpdateSale: updateSale,
+    handleDeleteSale: deleteSale
+  } = useSales();
 
   // Real-time clock update
   useEffect(() => {
@@ -25,59 +62,72 @@ const App = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Custom hooks for managing state and operations
- const {
-  products,
-  rawProducts, // ✅ ADD THIS LINE
-  loadProducts,
-  handleAddProduct,
-  handleUpdateProduct,
-  handleDeleteProduct
-} = useProducts();
-
-const {
-  salespersons,
-  rawSalespersons, // ✅ ADD THIS LINE
-  loadSalespersons,
-  handleAddSalesperson,
-  handleUpdateSalesperson,
-  handleDeleteSalesperson
-} = useSalespersons();
-
-  const {
-    sales,
-    loadSales,
-    handleSaveSale: saveSale,
-    handleUpdateSale: updateSale,
-    handleDeleteSale: deleteSale
-  } = useSales();
-
-   // Optimized data loading effect
- // Optimized data loading effect
+  // Optimized data loading effect
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
     const loadTabData = async () => {
       try {
-        if (activeTab === 'products' && rawProducts.length === 0) {
+        if (activeTab === 'products' && !loadedData.current.products) {
           await loadProducts();
+          loadedData.current.products = true;
           if (isMounted) console.log('Products page hit');
         }
-        else if (activeTab === 'salespersons' && rawSalespersons.length === 0) {
+        else if (activeTab === 'salespersons' && !loadedData.current.salespersons) {
           await loadSalespersons();
+          loadedData.current.salespersons = true;
           if (isMounted) console.log('Salespersons page hit');
         }
-        else if (activeTab === 'sales' || activeTab === 'records') {
-          // Only load dependencies if missing
-          const loadPromises = [];
-          if (rawProducts.length === 0) loadPromises.push(loadProducts());
-          if (rawSalespersons.length === 0) loadPromises.push(loadSalespersons());
-          await Promise.all(loadPromises);
+        else if (activeTab === 'sales') {
+          // For sales page, load products, salespersons and basic sales list (NO details)
+          let productsToUse = rawProducts;
+          let salespersonsToUse = rawSalespersons;
           
-          // Load sales only for sales/records tab
-          await loadSales(rawProducts, rawSalespersons);
-          if (isMounted) console.log(`${activeTab} page hit`);
+          // Load products if not loaded
+          if (!loadedData.current.products) {
+            const productResult = await loadProducts();
+            loadedData.current.products = true;
+            productsToUse = productResult.raw;
+          }
+          
+          // Load salespersons if not loaded
+          if (!loadedData.current.salespersons) {
+            const salespersonsResult = await loadSalespersons();
+            loadedData.current.salespersons = true;
+            salespersonsToUse = salespersonsResult.raw;
+          }
+          
+          // Load basic sales list WITHOUT details
+          if (!loadedData.current.sales) {
+            await loadSalesBasic(productsToUse, salespersonsToUse);
+            loadedData.current.sales = true;
+          }
+          if (isMounted) console.log('Sales page hit');
+        }
+        else if (activeTab === 'records') {
+          // For records page, load sales WITH details to display all records
+          let productsToUse = rawProducts;
+          let salespersonsToUse = rawSalespersons;
+          
+          // Load products if not loaded
+          if (!loadedData.current.products) {
+            const productResult = await loadProducts();
+            loadedData.current.products = true;
+            productsToUse = productResult.raw;
+          }
+          
+          // Load salespersons if not loaded
+          if (!loadedData.current.salespersons) {
+            const salespersonsResult = await loadSalespersons();
+            loadedData.current.salespersons = true;
+            salespersonsToUse = salespersonsResult.raw;
+          }
+          
+          // Load sales WITH details for displaying records, using the loaded data
+          await loadSales(productsToUse, salespersonsToUse);
+          
+          if (isMounted) console.log('Records page hit');
         }
       } catch (err) {
         if (isMounted) {
@@ -97,12 +147,9 @@ const {
     loadTabData();
 
     return () => {
-      isMounted = false; // Cleanup on unmount
+      isMounted = false;
     };
-  }, [activeTab]); // Only react to tab changes
- 
-
-
+  }, [activeTab]);
 
   // Wrapper functions to maintain the same interface
   const handleSaveSale = (sale, isEdit) => {
@@ -157,7 +204,7 @@ const {
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
-            onClick={loadAllData}
+            onClick={() => window.location.reload()}
             className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
           >
             Retry Connection
