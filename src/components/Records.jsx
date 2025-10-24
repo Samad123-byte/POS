@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import SaleDetailModal from './SaleDetailModal';
 
-const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, onNewSale, onEditSale }) => {
+const Records = ({ sales, products, salespersons, onEditSale, onDeleteSale, onNewSale }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedSale, setSelectedSale] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: 'saleTime', direction: 'desc' });
   const itemsPerPage = 10;
 
+  // Filter sales based on search term
   const filteredSales = sales.filter(sale =>
     sale.salespersonName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     sale.saleTime.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -16,6 +14,7 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
     (sale.comments && sale.comments.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Sort sales
   const sortedSales = React.useMemo(() => {
     return [...filteredSales].sort((a, b) => {
       let aValue = a[sortConfig.key];
@@ -34,7 +33,6 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
           }
           return new Date(dateStr).getTime();
         };
-        
         aValue = parseDate(aValue);
         bValue = parseDate(bValue);
       } else {
@@ -42,12 +40,8 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
         bValue = bValue?.toString().toLowerCase() || '';
       }
 
-      if (aValue < bValue) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
-      }
-      if (aValue > bValue) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
-      }
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
   }, [filteredSales, sortConfig]);
@@ -59,30 +53,16 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
 
   const handleSort = (key) => {
     let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
+    if (sortConfig.key === key && sortConfig.direction === 'asc') direction = 'desc';
     setSortConfig({ key, direction });
     setCurrentPage(1);
   };
 
   const getSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) {
-      return <span className="ml-1 text-gray-400">↕</span>;
-    }
+    if (sortConfig.key !== columnKey) return <span className="ml-1 text-gray-400">↕</span>;
     return sortConfig.direction === 'asc' ? 
       <span className="ml-1 text-white">↑</span> : 
       <span className="ml-1 text-white">↓</span>;
-  };
-
-  const handleSaleClick = (sale) => {
-    setSelectedSale(sale);
-    setShowDetailModal(true);
-  };
-
-  const handleEditSale = (sale) => {
-    setShowDetailModal(false);
-    onEditSale(sale);
   };
 
   return (
@@ -112,36 +92,11 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
       <table className="w-full border-collapse border border-gray-300 mb-4 rounded-lg overflow-hidden shadow-sm">
         <thead className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
           <tr>
-            <th 
-              className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-              onClick={() => handleSort('saleTime')}
-            >
-              SALE TIME {getSortIcon('saleTime')}
-            </th>
-            <th 
-              className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-              onClick={() => handleSort('total')}
-            >
-              TOTAL {getSortIcon('total')}
-            </th>
-            <th 
-              className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-              onClick={() => handleSort('salespersonName')}
-            >
-              SALESPERSON NAME {getSortIcon('salespersonName')}
-            </th>
-            <th 
-              className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-              onClick={() => handleSort('editDate')}
-            >
-              EDIT DATE {getSortIcon('editDate')}
-            </th>
-            <th 
-              className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-              onClick={() => handleSort('comments')}
-            >
-              COMMENTS {getSortIcon('comments')}
-            </th>
+            <th className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors" onClick={() => handleSort('saleTime')}>SALE TIME {getSortIcon('saleTime')}</th>
+            <th className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors" onClick={() => handleSort('total')}>TOTAL {getSortIcon('total')}</th>
+            <th className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors" onClick={() => handleSort('salespersonName')}>SALESPERSON NAME {getSortIcon('salespersonName')}</th>
+            <th className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors" onClick={() => handleSort('editDate')}>EDIT DATE {getSortIcon('editDate')}</th>
+            <th className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors" onClick={() => handleSort('comments')}>COMMENTS {getSortIcon('comments')}</th>
           </tr>
         </thead>
         <tbody>
@@ -149,7 +104,7 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
             <tr 
               key={sale.id} 
               className="border-b hover:bg-indigo-50 cursor-pointer transition-colors duration-200"
-              onClick={() => handleSaleClick(sale)}
+              onDoubleClick={() => onEditSale(sale)} // ✅ double-click opens Sales page
             >
               <td className="border border-gray-300 px-4 py-3">{sale.saleTime}</td>
               <td className="border border-gray-300 px-4 py-3 font-semibold text-green-600">{sale.total.toFixed(2)}</td>
@@ -177,9 +132,7 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
             <button 
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`px-3 py-1 border border-gray-300 rounded-md ${
-                currentPage === page ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'
-              }`}
+              className={`px-3 py-1 border border-gray-300 rounded-md ${currentPage === page ? 'bg-indigo-600 text-white' : 'hover:bg-gray-50'}`}
             >
               {page}
             </button>
@@ -202,14 +155,6 @@ const Records = ({ sales, products, salespersons, onUpdateSale, onDeleteSale, on
           New Sale
         </button>
       </div>
-
-      <SaleDetailModal 
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        sale={selectedSale}
-        onDeleteSale={onDeleteSale}
-        onEditSale={handleEditSale}
-      />
     </div>
   );
 };

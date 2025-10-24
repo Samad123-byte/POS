@@ -25,13 +25,7 @@ const Sales = ({ products, salespersons, onSaveSale, editingSale, onClearEdit })
       setIsEditMode(true);
       setEditingSaleId(editingSale.id);
       
-      Swal.fire({
-        icon: 'info',
-        title: 'Editing Sale',
-        text: `Now editing Sale #${editingSale.id}`,
-        timer: 2000,
-        showConfirmButton: false
-      });
+      
     }
   }, [editingSale, salespersons]);
 

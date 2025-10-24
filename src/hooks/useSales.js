@@ -77,75 +77,58 @@ const useSales = () => {
     }
   };
 
-  const handleSaveSale = async (sale, products, salespersons) => {
-    try {
-      // Find salesperson by name to get ID
-      const salesperson = salespersons.find(sp => sp.name === sale.salespersonName);
-      if (!salesperson) {
-        throw new Error('Salesperson not found');
-      }
-
-      // Create the sale
-      const backendSale = {
-        Total: sale.total,
-        SaleDate: new Date().toISOString(),
-        SalespersonId: salesperson.id,
-        Comments: sale.comments || null
-      };
-
-      const createdSale = await salesService.createSale(backendSale);
-
-      // Create sale details
-      const saleDetails = sale.items.map(item => {
-        const product = products.find(p => p.code === item.code);
-        return {
-          SaleId: createdSale.SaleId,
-          ProductId: product.id,
-          RetailPrice: item.price,
-          Quantity: item.quantity,
-          Discount: item.discount || 0
-        };
-      });
-
-      await saleDetailService.createMultipleSaleDetails(saleDetails);
-
-      // Add to local state without editDate since it's a new sale
-      const newSale = {
-        id: createdSale.SaleId,
-        saleTime: new Date(createdSale.SaleDate).toLocaleString('en-GB', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        }),
-        total: createdSale.Total,
-        salespersonName: salesperson.name,
-        salespersonId: salesperson.id,
-        editDate: null, // Set to null for new sales
-        comments: createdSale.Comments || '',
-        items: sale.items
-      };
-
-      setSales(prev => [...prev, newSale]);
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: 'Sale saved successfully!',
-        timer: 2000,
-        showConfirmButton: false
-      });
-    } catch (error) {
-      console.error('Error saving sale:', error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to save sale. Please try again.',
-      });
+ const handleSaveSale = async (sale, products, salespersons) => {
+  try {
+    // Find salesperson by name to get ID
+    const salesperson = salespersons.find(sp => sp.name === sale.salespersonName);
+    if (!salesperson) {
+      throw new Error('Salesperson not found');
     }
-  };
+
+    // Create the sale
+    const backendSale = {
+      Total: sale.total,
+      SaleDate: new Date().toISOString(),
+      SalespersonId: salesperson.id,
+      Comments: sale.comments || null
+    };
+
+    const createdSale = await salesService.createSale(backendSale);
+
+    // Create sale details
+    const saleDetails = sale.items.map(item => {
+      const product = products.find(p => p.code === item.code);
+      return {
+        SaleId: createdSale.SaleId,
+        ProductId: product.id,
+        RetailPrice: item.price,
+        Quantity: item.quantity,
+        Discount: item.discount || 0
+      };
+    });
+
+    await saleDetailService.createMultipleSaleDetails(saleDetails);
+
+    // ✅ Reload all sales from backend instead of manually updating state
+    await loadSales(products, salespersons);
+
+    Swal.fire({
+      icon: 'success',
+      title: 'Success!',
+      text: 'Sale saved successfully!',
+      timer: 2000,
+      showConfirmButton: false
+    });
+  } catch (error) {
+    console.error('Error saving sale:', error);
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: 'Failed to save sale. Please try again.',
+    });
+  }
+};
+
 
   const handleUpdateSale = async (updatedSale, products, salespersons) => {
     try {
