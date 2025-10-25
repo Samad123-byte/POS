@@ -1,11 +1,16 @@
-// hooks/useSalespersons.js
 import { useState } from 'react';
 import { salespersonService } from '../services/salespersonService';
 import Swal from 'sweetalert2';
 
 const useSalespersons = () => {
   const [salespersons, setSalespersons] = useState([]);
-    const [rawSalespersons, setRawSalespersons] = useState([]);
+  const [rawSalespersons, setRawSalespersons] = useState([]);
+  
+  // ✅ ADD PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const transformSalesperson = (salesperson) => ({
     id: salesperson.SalespersonId,
@@ -19,7 +24,6 @@ const useSalespersons = () => {
       minute: '2-digit',
       second: '2-digit'
     }),
-    // Only show edit date if UpdatedDate exists AND it's different from EnteredDate
     editDate: (salesperson.UpdatedDate && 
               new Date(salesperson.UpdatedDate).getTime() !== new Date(salesperson.EnteredDate).getTime()) 
               ? new Date(salesperson.UpdatedDate).toLocaleString('en-GB', {
@@ -32,13 +36,43 @@ const useSalespersons = () => {
                 }) : null
   });
 
-const loadSalespersons = async () => {
+// ✅ UPDATE loadSalespersons to accept pagination
+// ✅ UPDATE loadSalespersons to accept pagination
+const loadSalespersons = async (page = 1, size = 10) => {
   try {
-    const salespersonsData = await salespersonService.getAllSalespersons();
-    setRawSalespersons(salespersonsData); // ✅ ADD THIS LINE
-    const transformedData = salespersonsData.map(transformSalesperson);
-    setSalespersons(transformedData);
-    return { transformed: transformedData, raw: salespersonsData }; // ✅ CHANGE THIS LINE
+    const response = await salespersonService.getAllSalespersons(page, size);
+    
+    console.log('Salespersons API Response:', response); // Debug log
+    
+    // ✅ Handle both PascalCase (Data) and camelCase (data) from backend
+    const data = response.Data || response.data;
+    const currentPageNum = response.CurrentPage || response.currentPage;
+    const pageSizeNum = response.PageSize || response.pageSize;
+    const totalRec = response.TotalRecords || response.totalRecords;
+    const totalPgs = response.TotalPages || response.totalPages;
+    
+    // ✅ Check if response has pagination data
+    if (data && Array.isArray(data)) {
+      // Paginated response
+      setRawSalespersons(data);
+      const transformedData = data.map(transformSalesperson);
+      setSalespersons(transformedData);
+      setCurrentPage(currentPageNum || 1);
+      setPageSize(pageSizeNum || 10);
+      setTotalRecords(totalRec || 0);
+      setTotalPages(totalPgs || 1);
+      
+      return { transformed: transformedData, raw: data, pagination: response };
+    } else if (Array.isArray(response)) {
+      // Non-paginated response (backward compatible)
+      setRawSalespersons(response);
+      const transformedData = response.map(transformSalesperson);
+      setSalespersons(transformedData);
+      return { transformed: transformedData, raw: response };
+    } else {
+      console.error('Unexpected response format:', response);
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
     console.error('Error loading salespersons:', error);
     throw error;
@@ -53,9 +87,9 @@ const loadSalespersons = async () => {
       };
       
       const createdSalesperson = await salespersonService.createSalesperson(backendSalesperson);
-      const newSalesperson = transformSalesperson(createdSalesperson);
       
-      setSalespersons(prev => [...prev, newSalesperson]);
+      // ✅ Reload current page after adding
+      await loadSalespersons(currentPage, pageSize);
 
       Swal.fire({
         icon: 'success',
@@ -76,7 +110,6 @@ const loadSalespersons = async () => {
 
   const handleUpdateSalesperson = async (updatedSalesperson) => {
     try {
-      // Convert display date format to ISO string
       const enteredDateISO = updatedSalesperson.enteredDate ? 
         new Date(updatedSalesperson.enteredDate.replace(/(\d{2})\/(\d{2})\/(\d{4}), (.*)/, '$3-$2-$1T$4')).toISOString() :
         new Date().toISOString();
@@ -87,26 +120,10 @@ const loadSalespersons = async () => {
         EnteredDate: enteredDateISO
       };
       
-      console.log('Updating salesperson:', updatedSalesperson.id, 'with data:', backendSalesperson); // Debug log
-      
       await salespersonService.updateSalesperson(updatedSalesperson.id, backendSalesperson);
       
-      // Only set edit date when actually updating an existing salesperson
-      const updatedSalespersonWithNewEditDate = {
-        ...updatedSalesperson,
-        editDate: new Date().toLocaleString('en-GB', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      };
-      
-      setSalespersons(prev => prev.map(salesperson => 
-        salesperson.id === updatedSalesperson.id ? updatedSalespersonWithNewEditDate : salesperson
-      ));
+      // ✅ Reload current page after updating
+      await loadSalespersons(currentPage, pageSize);
 
       Swal.fire({
         icon: 'success',
@@ -126,44 +143,48 @@ const loadSalespersons = async () => {
   };
 
   const handleDeleteSalesperson = async (salespersonId) => {
-  try {
-    console.log('Attempting to delete salesperson:', salespersonId); // Debug log
-    
-    await salespersonService.deleteSalesperson(salespersonId);
-    setSalespersons(prev => prev.filter(salesperson => salesperson.id !== salespersonId));
+    try {
+      await salespersonService.deleteSalesperson(salespersonId);
+      
+      // ✅ Reload current page after deleting
+      await loadSalespersons(currentPage, pageSize);
 
-    Swal.fire({
-      icon: 'success',
-      title: 'Deleted!',
-      text: 'Salesperson has been deleted.',
-      timer: 1500,
-      showConfirmButton: false
-    });
-  } catch (error) {
-    console.error('Error deleting salesperson:', error);
-    
-    // ✅ Extract backend error message
-    const errorMessage = error.response?.data?.message || 
-                        'Cannot delete salesperson. This salesperson has associated sales records in the database. Please reassign or delete the sales first before removing this salesperson.';
-    
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: errorMessage,
-    });
-  }
-};
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Salesperson has been deleted.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error deleting salesperson:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          'Cannot delete salesperson. This salesperson has associated sales records in the database. Please reassign or delete the sales first before removing this salesperson.';
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+      });
+    }
+  };
 
   return {
-
-  salespersons,
-  rawSalespersons, // ✅ ADD THIS LINE
-  setSalespersons,
-  loadSalespersons,
-  handleAddSalesperson,
-  handleUpdateSalesperson,
-  handleDeleteSalesperson
-
+    salespersons,
+    rawSalespersons,
+    setSalespersons,
+    loadSalespersons,
+    handleAddSalesperson,
+    handleUpdateSalesperson,
+    handleDeleteSalesperson,
+    // ✅ EXPORT PAGINATION STATE
+    currentPage,
+    pageSize,
+    totalRecords,
+    totalPages,
+    setCurrentPage,
+    setPageSize
   };
 };
 

@@ -30,7 +30,11 @@ const App = () => {
     loadProducts,
     handleAddProduct,
     handleUpdateProduct,
-    handleDeleteProduct
+    handleDeleteProduct,
+      currentPage: productCurrentPage,
+  pageSize: productPageSize,
+  totalRecords: productTotalRecords,
+  totalPages: productTotalPages
   } = useProducts();
 
   const {
@@ -39,7 +43,11 @@ const App = () => {
     loadSalespersons,
     handleAddSalesperson,
     handleUpdateSalesperson,
-    handleDeleteSalesperson
+    handleDeleteSalesperson,
+      currentPage: salespersonCurrentPage,
+  pageSize: salespersonPageSize,
+  totalRecords: salespersonTotalRecords,
+  totalPages: salespersonTotalPages
   } = useSalespersons();
 
   const {
@@ -308,15 +316,19 @@ const App = () => {
         {/* Content Area */}
         <main className="flex-1 overflow-auto p-6">
           <div className="max-w-7xl mx-auto">
-            {activeTab === 'products' && (
-              <Products 
-                products={products}
-                onAddProduct={handleAddProduct}
-                onUpdateProduct={handleUpdateProduct}
-                onDeleteProduct={handleDeleteProduct}
-              />
-            )}
-            
+          {activeTab === 'products' && (
+  <Products 
+    products={products}
+    onAddProduct={handleAddProduct}
+    onUpdateProduct={handleUpdateProduct}
+    onDeleteProduct={handleDeleteProduct}
+    currentPage={productCurrentPage}
+    pageSize={productPageSize}
+    totalRecords={productTotalRecords}
+    totalPages={productTotalPages}
+    loadProducts={loadProducts}
+  />
+)}
             {activeTab === 'sales' && (
               <Sales 
                 products={products}
@@ -340,14 +352,19 @@ const App = () => {
               />
             )}
             
-            {activeTab === 'salespersons' && (
-              <Salespersons 
-                salespersons={salespersons}
-                onAddSalesperson={handleAddSalesperson}
-                onUpdateSalesperson={handleUpdateSalesperson}
-                onDeleteSalesperson={handleDeleteSalesperson}
-              />
-            )}
+           {activeTab === 'salespersons' && (
+  <Salespersons 
+    salespersons={salespersons}
+    onAddSalesperson={handleAddSalesperson}
+    onUpdateSalesperson={handleUpdateSalesperson}
+    onDeleteSalesperson={handleDeleteSalesperson}
+    currentPage={salespersonCurrentPage}
+    pageSize={salespersonPageSize}
+    totalRecords={salespersonTotalRecords}
+    totalPages={salespersonTotalPages}
+    loadSalespersons={loadSalespersons}
+  />
+)}
           </div>
         </main>
       </div>

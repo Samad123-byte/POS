@@ -1,8 +1,11 @@
 import apiClient from './apiClient';
 
 export const saleDetailService = {
-  getAll: async () => {
-    const res = await apiClient.get('/SaleDetails/getall');
+  // ✅ Add pagination parameters
+  getAll: async (pageNumber = 1, pageSize = 10) => {
+    const res = await apiClient.get('/SaleDetails/getall', {
+      params: { pageNumber, pageSize }
+    });
     return res.data;
   },
 
@@ -26,7 +29,6 @@ export const saleDetailService = {
     return res.data;
   },
 
-  // ✅ Match lowercase routes exactly
   getSaleDetailsBySaleId: async (saleId) => {
     const res = await apiClient.get(`/SaleDetails/bysale/${saleId}`);
     return res.data;

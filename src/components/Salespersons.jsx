@@ -3,7 +3,17 @@ import Swal from 'sweetalert2';
 import AddSalespersonModal from './AddSalespersonModal';
 import EditSalespersonModal from './EditSalespersonModal';
 
-const Salespersons = ({ salespersons, onAddSalesperson, onUpdateSalesperson, onDeleteSalesperson }) => {
+const Salespersons = ({ 
+  salespersons, 
+  onAddSalesperson, 
+  onUpdateSalesperson, 
+  onDeleteSalesperson,
+  currentPage,
+  pageSize,
+  totalRecords,
+  totalPages,
+  loadSalespersons 
+}) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSalesperson, setEditingSalesperson] = useState(null);
@@ -78,7 +88,7 @@ const Salespersons = ({ salespersons, onAddSalesperson, onUpdateSalesperson, onD
                 {salesperson.editDate ? (
                   <span className="text-green-600 font-medium">{salesperson.editDate}</span>
                 ) : (
-                  <span className="text-gray-400 italic">➖➖</span> 
+                  <span className="text-gray-400 italic">——</span> 
                 )}
               </td>
               <td className="border border-gray-300 px-4 py-3">
@@ -101,6 +111,34 @@ const Salespersons = ({ salespersons, onAddSalesperson, onUpdateSalesperson, onD
           ))}
         </tbody>
       </table>
+
+      {/* ✅ PAGINATION CONTROLS */}
+      <div className="flex justify-between items-center mt-4">
+        <p className="text-sm text-gray-600">
+          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} salespersons
+        </p>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => loadSalespersons(currentPage - 1, pageSize)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Previous
+          </button>
+          
+          <span className="px-3 py-1 border border-gray-300 rounded-md bg-indigo-600 text-white">
+            Page {currentPage} of {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => loadSalespersons(currentPage + 1, pageSize)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       <AddSalespersonModal 
         isOpen={showAddModal}

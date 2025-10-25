@@ -1,11 +1,16 @@
-// hooks/useProducts.js
 import { useState } from 'react';
 import { productService } from '../services/productService';
 import Swal from 'sweetalert2';
 
 const useProducts = () => {
   const [products, setProducts] = useState([]);
-    const [rawProducts, setRawProducts] = useState([]);
+  const [rawProducts, setRawProducts] = useState([]);
+  
+  // ✅ ADD PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const transformProduct = (product) => ({
     id: product.ProductId,
@@ -21,7 +26,6 @@ const useProducts = () => {
       minute: '2-digit',
       second: '2-digit'
     }) : null,
-    // Only show edit date if UpdatedDate exists AND it's not null
     editDate: (product.UpdatedDate && product.UpdatedDate !== null) 
               ? new Date(product.UpdatedDate).toLocaleString('en-GB', {
                   day: '2-digit',
@@ -33,13 +37,42 @@ const useProducts = () => {
                 }) : null
   });
 
-const loadProducts = async () => {
+  // ✅ UPDATE loadProducts to accept pagination
+const loadProducts = async (page = 1, size = 10) => {
   try {
-    const productsData = await productService.getAllProducts();
-    setRawProducts(productsData); // ✅ ADD THIS LINE
-    const transformed = productsData.map(transformProduct);
-    setProducts(transformed);
-    return { transformed, raw: productsData }; // ✅ CHANGE THIS LINE
+    const response = await productService.getAllProducts(page, size);
+    
+    console.log('API Response:', response); // Debug log
+    
+    // ✅ Handle both PascalCase (Data) and camelCase (data) from backend
+    const data = response.Data || response.data;
+    const currentPageNum = response.CurrentPage || response.currentPage;
+    const pageSizeNum = response.PageSize || response.pageSize;
+    const totalRec = response.TotalRecords || response.totalRecords;
+    const totalPgs = response.TotalPages || response.totalPages;
+    
+    // ✅ Check if response has pagination data
+    if (data && Array.isArray(data)) {
+      // Paginated response
+      setRawProducts(data);
+      const transformed = data.map(transformProduct);
+      setProducts(transformed);
+      setCurrentPage(currentPageNum || 1);
+      setPageSize(pageSizeNum || 10);
+      setTotalRecords(totalRec || 0);
+      setTotalPages(totalPgs || 1);
+      
+      return { transformed, raw: data, pagination: response };
+    } else if (Array.isArray(response)) {
+      // Non-paginated response (backward compatible)
+      setRawProducts(response);
+      const transformed = response.map(transformProduct);
+      setProducts(transformed);
+      return { transformed, raw: response };
+    } else {
+      console.error('Unexpected response format:', response);
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
     console.error('Error loading products:', error);
     throw error;
@@ -58,8 +91,8 @@ const loadProducts = async () => {
       const createdProduct = await productService.createProduct(backendProduct);
       const newProduct = transformProduct(createdProduct);
       
-   setProducts([newProduct, ...products]);
-
+      // ✅ Reload current page after adding
+      await loadProducts(currentPage, pageSize);
       
       Swal.fire({
         icon: 'success',
@@ -94,22 +127,8 @@ const loadProducts = async () => {
       
       await productService.updateProduct(updatedProduct.id, backendProduct);
       
-      // Only set edit date when actually updating an existing product
-      const updatedProductWithNewEditDate = {
-        ...updatedProduct,
-        editDate: new Date().toLocaleString('en-GB', {
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
-        })
-      };
-      
-      setProducts(prev => prev.map(product => 
-        product.id === updatedProduct.id ? updatedProductWithNewEditDate : product
-      ));
+      // ✅ Reload current page after updating
+      await loadProducts(currentPage, pageSize);
 
       Swal.fire({
         icon: 'success',
@@ -128,41 +147,49 @@ const loadProducts = async () => {
     }
   };
 
-const handleDeleteProduct = async (productId) => {
-  try {
-    await productService.deleteProduct(productId);
-    setProducts(prev => prev.filter(product => product.id !== productId));
-    
-    Swal.fire({
-      icon: 'success',
-      title: 'Deleted!',
-      text: 'Product has been deleted.',
-      timer: 1500,
-      showConfirmButton: false
-    });
-  } catch (error) {
-    console.error('Error deleting product:', error);
-    
-    // ✅ Extract backend error message
-    const errorMessage = error.response?.data?.message || 
-                        'Cannot delete product. This product is referenced in existing sale details. Please remove it from all sales before deleting the product.';
-    
-    Swal.fire({
-      icon: 'error',
-      title: 'Error',
-      text: errorMessage,
-    });
-  }
-};
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await productService.deleteProduct(productId);
+      
+      // ✅ Reload current page after deleting
+      await loadProducts(currentPage, pageSize);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted!',
+        text: 'Product has been deleted.',
+        timer: 1500,
+        showConfirmButton: false
+      });
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      
+      const errorMessage = error.response?.data?.message || 
+                          'Cannot delete product. This product is referenced in existing sale details. Please remove it from all sales before deleting the product.';
+      
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: errorMessage,
+      });
+    }
+  };
 
   return {
     products,
-  rawProducts, // ✅ ADD THIS LINE
-  setProducts,
-  loadProducts,
-  handleAddProduct,
-  handleUpdateProduct,
-  handleDeleteProduct
+    rawProducts,
+    setProducts,
+    loadProducts,
+    handleAddProduct,
+    handleUpdateProduct,
+    handleDeleteProduct,
+    // ✅ EXPORT PAGINATION STATE
+    currentPage,
+    pageSize,
+    totalRecords,
+    totalPages,
+    setCurrentPage,
+    setPageSize
   };
 };
 

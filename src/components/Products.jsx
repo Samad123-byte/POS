@@ -3,7 +3,17 @@ import Swal from 'sweetalert2';
 import AddProductModal from './AddProductModal';
 import EditProductModal from './EditProductModal';
 
-const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) => {
+const Products = ({ 
+  products, 
+  onUpdateProduct, 
+  onDeleteProduct, 
+  onAddProduct,
+  currentPage,
+  pageSize,
+  totalRecords,
+  totalPages,
+  loadProducts 
+}) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
@@ -27,7 +37,6 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
     }).then((result) => {
       if (result.isConfirmed) {
         onDeleteProduct(productId);
-       
       }
     });
   };
@@ -44,7 +53,6 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      // Handle different data types
       if (sortConfig.key === 'costPrice' || sortConfig.key === 'retailPrice') {
         aValue = parseFloat(aValue);
         bValue = parseFloat(bValue);
@@ -52,11 +60,9 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
         aValue = parseInt(aValue);
         bValue = parseInt(bValue);
       } else if (sortConfig.key === 'creationDate' || sortConfig.key === 'editDate') {
-        // Convert dates to comparable format
         aValue = new Date(aValue || '1900-01-01').getTime();
         bValue = new Date(bValue || '1900-01-01').getTime();
       } else {
-        // String comparison
         aValue = aValue?.toString().toLowerCase() || '';
         bValue = bValue?.toString().toLowerCase() || '';
       }
@@ -170,7 +176,7 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
                 {product.editDate ? (
                   <span className="text-green-600 font-medium">{product.editDate}</span>
                 ) : (
-                  <span className="text-gray-400 italic">➖➖</span>
+                  <span className="text-gray-400 italic">——</span>
                 )}
               </td>
               <td className="border border-gray-300 px-4 py-3">
@@ -193,6 +199,34 @@ const Products = ({ products, onUpdateProduct, onDeleteProduct, onAddProduct }) 
           ))}
         </tbody>
       </table>
+
+      {/* ✅ PAGINATION CONTROLS */}
+      <div className="flex justify-between items-center mt-4">
+        <p className="text-sm text-gray-600">
+          Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalRecords)} of {totalRecords} products
+        </p>
+        <div className="flex gap-2">
+          <button 
+            onClick={() => loadProducts(currentPage - 1, pageSize)}
+            disabled={currentPage === 1}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Previous
+          </button>
+          
+          <span className="px-3 py-1 border border-gray-300 rounded-md bg-indigo-600 text-white">
+            Page {currentPage} of {totalPages}
+          </span>
+          
+          <button 
+            onClick={() => loadProducts(currentPage + 1, pageSize)}
+            disabled={currentPage === totalPages}
+            className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       <AddProductModal 
         isOpen={showAddModal}

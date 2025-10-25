@@ -1,10 +1,12 @@
 import apiClient from './apiClient';
 
 export const productService = {
-  // ✅ Get all
-  getAllProducts: async () => {
+  // ✅ Add pagination parameters (BACKWARD COMPATIBLE - works with old code too)
+  getAllProducts: async (pageNumber = 1, pageSize = 10) => {
     try {
-      const response = await apiClient.get('/Products/getAll');
+      const response = await apiClient.get('/Products/getAll', {
+        params: { pageNumber, pageSize }
+      });
       return response.data;
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -12,7 +14,7 @@ export const productService = {
     }
   },
 
-  // ✅ Get by ID
+  // ✅ Rest stays the same
   getProductById: async (id) => {
     try {
       const response = await apiClient.get(`/Products/getById/${id}`);
@@ -23,7 +25,6 @@ export const productService = {
     }
   },
 
-  // ✅ Create
   createProduct: async (product) => {
     try {
       const productData = {
@@ -41,7 +42,6 @@ export const productService = {
     }
   },
 
-  // ✅ Update
   updateProduct: async (id, product) => {
     try {
       const productData = {
@@ -61,7 +61,6 @@ export const productService = {
     }
   },
 
-  // ✅ Delete
   deleteProduct: async (id) => {
     try {
       const response = await apiClient.post('/Products/delete', id, {
