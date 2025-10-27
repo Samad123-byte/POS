@@ -15,6 +15,7 @@ const App = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [editingSale, setEditingSale] = useState(null);
+
   
   // Track what data has been loaded to prevent duplicate calls
   const loadedData = useRef({
@@ -22,6 +23,9 @@ const App = () => {
     salespersons: false,
     sales: false
   });
+
+
+
 
   // Custom hooks for managing state and operations
   const {
@@ -87,32 +91,35 @@ const App = () => {
           loadedData.current.salespersons = true;
           if (isMounted) console.log('Salespersons page hit');
         }
-        else if (activeTab === 'sales') {
-          // For sales page, load products, salespersons and basic sales list (NO details)
-          let productsToUse = rawProducts;
-          let salespersonsToUse = rawSalespersons;
-          
-          // Load products if not loaded
-          if (!loadedData.current.products) {
-            const productResult = await loadProducts();
-            loadedData.current.products = true;
-            productsToUse = productResult.raw;
-          }
-          
-          // Load salespersons if not loaded
-          if (!loadedData.current.salespersons) {
-            const salespersonsResult = await loadSalespersons();
-            loadedData.current.salespersons = true;
-            salespersonsToUse = salespersonsResult.raw;
-          }
-          
-          // Load basic sales list WITHOUT details
-          if (!loadedData.current.sales) {
-            await loadSalesBasic(productsToUse, salespersonsToUse);
-            loadedData.current.sales = true;
-          }
-          if (isMounted) console.log('Sales page hit');
-        }
+      else if (activeTab === 'sales') {
+  // For sales page, load products, salespersons and basic sales list (NO details)
+  let productsToUse = rawProducts;
+  let salespersonsToUse = rawSalespersons;
+  
+  // Load products if not loaded
+  if (!loadedData.current.products) {
+    const productResult = await loadProducts();
+    loadedData.current.products = true;
+    productsToUse = productResult.raw;
+  }
+  
+  // Load salespersons if not loaded
+  if (!loadedData.current.salespersons) {
+    const salespersonsResult = await loadSalespersons();
+    loadedData.current.salespersons = true;
+    salespersonsToUse = salespersonsResult.raw;
+  }
+  
+  // Load basic sales list WITHOUT details
+  if (!loadedData.current.sales) {
+await loadSalesBasic(productsToUse, salespersonsToUse);
+   // ❌ THIS LINE
+    loadedData.current.sales = true;
+  }
+
+  if (isMounted) console.log('Sales page hit');
+}
+
         else if (activeTab === 'records') {
           // For records page, load sales WITH details to display all records
           let productsToUse = rawProducts;
@@ -337,6 +344,7 @@ const App = () => {
                 editingSale={editingSale}
                 onClearEdit={handleClearEdit}
                 currentTime={currentTime}
+                 loadSaleDetails={loadSaleDetails}
               />
             )}
             
