@@ -91,7 +91,7 @@ const App = () => {
           loadedData.current.salespersons = true;
           if (isMounted) console.log('Salespersons page hit');
         }
-      else if (activeTab === 'sales') {
+else if (activeTab === 'sales') {
   // For sales page, load products, salespersons and basic sales list (NO details)
   let productsToUse = rawProducts;
   let salespersonsToUse = rawSalespersons;
@@ -112,38 +112,36 @@ const App = () => {
   
   // Load basic sales list WITHOUT details
   if (!loadedData.current.sales) {
-await loadSalesBasic(productsToUse, salespersonsToUse);
-   // ❌ THIS LINE
+    await loadSalesBasic(productsToUse, salespersonsToUse); // âœ… Keep this for sales page
     loadedData.current.sales = true;
   }
 
   if (isMounted) console.log('Sales page hit');
 }
-
-        else if (activeTab === 'records') {
-          // For records page, load sales WITH details to display all records
-          let productsToUse = rawProducts;
-          let salespersonsToUse = rawSalespersons;
-          
-          // Load products if not loaded
-          if (!loadedData.current.products) {
-            const productResult = await loadProducts();
-            loadedData.current.products = true;
-            productsToUse = productResult.raw;
-          }
-          
-          // Load salespersons if not loaded
-          if (!loadedData.current.salespersons) {
-            const salespersonsResult = await loadSalespersons();
-            loadedData.current.salespersons = true;
-            salespersonsToUse = salespersonsResult.raw;
-          }
-          
-          // Load sales WITH details for displaying records, using the loaded data
-          await loadSales(productsToUse, salespersonsToUse);
-          
-          if (isMounted) console.log('Records page hit');
-        }
+else if (activeTab === 'records') {
+  // For records page, load sales WITH details to display all records
+  let productsToUse = rawProducts;
+  let salespersonsToUse = rawSalespersons;
+  
+  // Load products if not loaded
+  if (!loadedData.current.products) {
+    const productResult = await loadProducts();
+    loadedData.current.products = true;
+    productsToUse = productResult.raw;
+  }
+  
+  // Load salespersons if not loaded
+  if (!loadedData.current.salespersons) {
+    const salespersonsResult = await loadSalespersons();
+    loadedData.current.salespersons = true;
+    salespersonsToUse = salespersonsResult.raw;
+  }
+  
+  // âœ… Load sales WITH details for displaying records
+  await loadSales(productsToUse, salespersonsToUse);
+  
+  if (isMounted) console.log('Records page hit');
+}
       } catch (err) {
         if (isMounted) {
           console.error('Error loading tab data:', err);
@@ -194,10 +192,10 @@ await loadSalesBasic(productsToUse, salespersonsToUse);
   };
 
   const menuItems = [
-    { id: 'products', label: 'Products', icon: '📦' },
-    { id: 'sales', label: 'Sales', icon: '🛒' },
-    { id: 'records', label: 'Records', icon: '📊' },
-    { id: 'salespersons', label: 'SalePersons', icon: '👥' }
+    { id: 'products', label: 'Products', icon: 'ðŸ“¦' },
+    { id: 'sales', label: 'Sales', icon: 'ðŸ›’' },
+    { id: 'records', label: 'Records', icon: 'ðŸ“Š' },
+    { id: 'salespersons', label: 'SalePersons', icon: 'ðŸ‘¥' }
   ];
 
   if (loading) {
@@ -215,7 +213,7 @@ await loadSalesBasic(productsToUse, salespersonsToUse);
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
         <div className="text-center bg-white p-8 rounded-xl shadow-lg border border-red-200">
-          <div className="text-red-500 text-6xl mb-4">⚠️</div>
+          <div className="text-red-500 text-6xl mb-4">âš ï¸</div>
           <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
           <p className="text-gray-600 mb-4">{error}</p>
           <button
@@ -286,7 +284,7 @@ await loadSalesBasic(productsToUse, salespersonsToUse);
           {!sidebarCollapsed && (
             <div className="text-center text-xs text-gray-500">
               <p>Version 1.0</p>
-              <p>© 2024 POS System</p>
+              <p>Â© 2024 POS System</p>
             </div>
           )}
         </div>
