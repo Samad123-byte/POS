@@ -3,21 +3,27 @@ import { Package, ShoppingCart, FileText, User } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import Records from './components/Records';
-import SaleDetailView from './components/SaleDetailView';
 import Salesperson from './components/Salesperson';
 
 function App() {
   const [activeTab, setActiveTab] = useState('products');
-  const [viewingSaleId, setViewingSaleId] = useState(null);
+  const [editingSaleId, setEditingSaleId] = useState(null);
 
-  const handleViewSale = (saleId) => {
-    setViewingSaleId(saleId);
-    setActiveTab('saleDetail');
+  const handleEditSale = (saleId) => {
+    setEditingSaleId(saleId);
+    setActiveTab('sales');
   };
 
   const handleBackToRecords = () => {
-    setViewingSaleId(null);
+    setEditingSaleId(null);
     setActiveTab('records');
+  };
+
+  const handleTabChange = (tab) => {
+    if (tab !== 'sales') {
+      setEditingSaleId(null);
+    }
+    setActiveTab(tab);
   };
 
   return (
@@ -30,7 +36,7 @@ function App() {
       {/* Navigation Tabs */}
       <div className="flex border-b bg-white shadow">
         <button
-          onClick={() => setActiveTab('products')}
+          onClick={() => handleTabChange('products')}
           className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
             activeTab === 'products' 
               ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
@@ -40,7 +46,7 @@ function App() {
           <Package size={20} /> Products
         </button>
         <button
-          onClick={() => setActiveTab('sales')}
+          onClick={() => handleTabChange('sales')}
           className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
             activeTab === 'sales' 
               ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
@@ -50,7 +56,7 @@ function App() {
           <ShoppingCart size={20} /> Sales
         </button>
         <button
-          onClick={() => setActiveTab('records')}
+          onClick={() => handleTabChange('records')}
           className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
             activeTab === 'records' 
               ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
@@ -60,7 +66,7 @@ function App() {
           <FileText size={20} /> Records
         </button>
         <button
-          onClick={() => setActiveTab('salesperson')}
+          onClick={() => handleTabChange('salesperson')}
           className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
             activeTab === 'salesperson' 
               ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
@@ -74,11 +80,13 @@ function App() {
       {/* Content Area */}
       <div className="container mx-auto py-6 px-4">
         {activeTab === 'products' && <Products />}
-        {activeTab === 'sales' && <Sales />}
-        {activeTab === 'records' && <Records onViewSale={handleViewSale} />}
-        {activeTab === 'saleDetail' && viewingSaleId && (
-          <SaleDetailView saleId={viewingSaleId} onBack={handleBackToRecords} />
+        {activeTab === 'sales' && (
+          <Sales 
+            editingSaleId={editingSaleId} 
+            onBackToRecords={editingSaleId ? handleBackToRecords : null}
+          />
         )}
+        {activeTab === 'records' && <Records onEditSale={handleEditSale} />}
         {activeTab === 'salesperson' && <Salesperson />}
       </div>
     </div>
