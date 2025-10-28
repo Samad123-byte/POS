@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2 } from 'lucide-react';
+import { X, Plus, Trash2, ShoppingCart, Search, Package } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { salespersonService } from '../services/salespersonService';
 import { productService } from '../services/productService';
@@ -10,14 +10,14 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [salespersons, setSalespersons] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedSalesperson, setSelectedSalesperson] = useState('');
-  const [saleDate, setSaleDate] = useState('');
-  const [comments, setComments] = useState(''); // ✅ NEW: Comments field
+  const [comments, setComments] = useState('');
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState(null);
+  const [showProductModal, setShowProductModal] = useState(false);
 
   useEffect(() => {
     const initializeComponent = async () => {
@@ -26,11 +26,6 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
       
       if (editingSaleId) {
         await loadSaleForEdit(editingSaleId);
-      } else {
-        // Set current date/time for new sales
-        const now = new Date();
-        const formattedDateTime = now.toISOString().slice(0, 16);
-        setSaleDate(formattedDateTime);
       }
     };
     
@@ -40,14 +35,12 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const loadSaleForEdit = async (saleId) => {
     setLoading(true);
     try {
-      // First try to get sale details
       const detailsResponse = await saleDetailService.getSaleDetailsBySaleId(saleId);
       
       if (!detailsResponse || (Array.isArray(detailsResponse) && detailsResponse.length === 0)) {
         throw new Error('No sale details found for this sale ID');
       }
       
-      // Try to get the main sale record
       let saleResponse;
       try {
         saleResponse = await saleService.getById(saleId);
@@ -57,19 +50,16 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
         saleResponse = {
           saleId: saleId,
           salespersonId: firstDetail.salespersonId || '',
-          saleDate: firstDetail.saleDate || new Date().toISOString(),
           total: 0,
-          comments: '' // ✅ NEW
+          comments: ''
         };
       }
       
       setIsEditMode(true);
       setCurrentSaleId(saleId);
       setSelectedSalesperson(saleResponse.salespersonId?.toString() || '');
-      setSaleDate(saleResponse.saleDate ? new Date(saleResponse.saleDate).toISOString().slice(0, 16) : '');
-      setComments(saleResponse.comments || ''); // ✅ NEW: Load comments
+      setComments(saleResponse.comments || '');
       
-      // Fetch all products to get names and codes
       const productsResponse = await productService.getAll(1, 1000);
       const allProducts = productsResponse.data || [];
       
@@ -140,6 +130,7 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
       }]);
     }
     setProductSearch('');
+    setShowProductModal(false);
   };
 
   const updateCartItem = (productId, field, value) => {
@@ -189,10 +180,6 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
       Swal.fire('Warning', 'Please select a salesperson', 'warning');
       return;
     }
-    if (!saleDate) {
-      Swal.fire('Warning', 'Please select a date', 'warning');
-      return;
-    }
     if (cart.length === 0) {
       Swal.fire('Warning', 'Please add products to cart', 'warning');
       return;
@@ -201,22 +188,19 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
     setLoading(true);
     try {
       if (isEditMode && currentSaleId) {
-        // Update existing sale
         const saleData = {
           saleId: currentSaleId,
           salespersonId: parseInt(selectedSalesperson),
           total: calculateTotal(),
-          saleDate: new Date(saleDate).toISOString(),
-          comments: comments || null, // ✅ NEW: Include comments
+          saleDate: new Date().toISOString(),
+          comments: comments || null,
           updatedDate: new Date().toISOString()
         };
 
         await saleService.update(currentSaleId, saleData);
         
-        // Update sale details
         for (const item of cart) {
           if (item.saleDetailId) {
-            // Update existing detail
             await saleDetailService.update({
               saleDetailId: item.saleDetailId,
               saleId: currentSaleId,
@@ -226,7 +210,6 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
               discount: item.discount || 0
             });
           } else {
-            // Add new detail
             await saleDetailService.add({
               saleId: currentSaleId,
               productId: item.productId,
@@ -239,12 +222,11 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
         
         Swal.fire('Success', 'Sale updated successfully!', 'success');
       } else {
-        // Create new sale
         const saleData = {
           salespersonId: parseInt(selectedSalesperson),
           total: calculateTotal(),
-          saleDate: new Date(saleDate).toISOString(),
-          comments: comments || null // ✅ NEW: Include comments
+          saleDate: new Date().toISOString(),
+          comments: comments || null
         };
 
         const saleResponse = await saleService.create(saleData);
@@ -262,12 +244,9 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
         Swal.fire('Success', 'Sale created successfully!', 'success');
       }
       
-      // Reset form
       setCart([]);
       setSelectedSalesperson('');
-      setComments(''); // ✅ NEW: Reset comments
-      const now = new Date();
-      setSaleDate(now.toISOString().slice(0, 16));
+      setComments('');
       setIsEditMode(false);
       setCurrentSaleId(null);
       
@@ -287,197 +266,260 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   );
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6">
-      {onBackToRecords && (
-        <button
-          onClick={onBackToRecords}
-          className="mb-4 text-blue-600 hover:text-blue-800 font-medium"
-        >
-          ← Back to Records
-        </button>
-      )}
-      
-      <div className="border-b pb-4 mb-6">
-        <div className="flex gap-4">
-          <button className="px-6 py-2 bg-indigo-600 text-white font-semibold rounded">
-            Sale
-          </button>
-          <button className="px-6 py-2 text-gray-600 font-semibold">
-            Records
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block text-sm font-medium mb-2">Date</label>
-          <input
-            type="datetime-local"
-            value={saleDate}
-            onChange={(e) => setSaleDate(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-2">Salesperson</label>
-          <select
-            value={selectedSalesperson}
-            onChange={(e) => setSelectedSalesperson(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {onBackToRecords && (
+          <button
+            onClick={onBackToRecords}
+            className="mb-6 flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-semibold transition-colors duration-200"
           >
-            <option value="">-- Select Sale Person --</option>
-            {salespersons.map(sp => (
-              <option key={sp.salespersonId} value={sp.salespersonId}>
-                {sp.name} ({sp.code})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* ✅ NEW: Comments Field */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-2">Comments (Optional)</label>
-        <textarea
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-          placeholder="Add any notes or comments about this sale..."
-          rows="3"
-          className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
-        />
-      </div>
-
-      <div className="mb-6">
-        <label className="block text-sm font-medium mb-2">Enter Product...</label>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={productSearch}
-            onChange={(e) => setProductSearch(e.target.value)}
-            className="w-full border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-          />
-          {productSearch && filteredProducts.length > 0 && (
-            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded shadow-lg max-h-60 overflow-y-auto">
-              {filteredProducts.map(product => (
-                <div
-                  key={product.productId}
-                  onClick={() => addToCart(product)}
-                  className="px-4 py-3 hover:bg-gray-100 cursor-pointer border-b"
-                >
-                  <div className="font-medium">{product.name}</div>
-                  <div className="text-sm text-gray-600">
-                    Code: {product.code} | Price: ${product.retailPrice?.toFixed(2)}
-                  </div>
-                </div>
-              ))}
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Records
+          </button>
+        )}
+        
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-8 py-6">
+            <div className="flex items-center gap-3">
+              <ShoppingCart className="w-8 h-8 text-white" />
+              <h1 className="text-3xl font-bold text-white">
+                {isEditMode ? 'Edit Sale' : 'New Sale'}
+              </h1>
             </div>
-          )}
-        </div>
-      </div>
+          </div>
 
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <span className="text-sm font-medium">Show 10 entries</span>
-          <input
-            type="text"
-            placeholder="Search"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-1 text-sm w-48"
-          />
-        </div>
-      </div>
+          <div className="p-8">
+            {/* Salesperson Selection */}
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
+              <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Salesperson
+              </h2>
+              
+              <select
+                value={selectedSalesperson}
+                onChange={(e) => setSelectedSalesperson(e.target.value)}
+                className="w-full border-2 border-indigo-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-lg font-medium"
+              >
+                <option value="">-- Select Salesperson --</option>
+                {salespersons.map(sp => (
+                  <option key={sp.salespersonId} value={sp.salespersonId}>
+                    {sp.name} ({sp.code})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      <div className="border rounded-lg overflow-hidden mb-4">
-        <table className="w-full">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Name</th>
-              <th className="px-4 py-3 text-left text-sm font-semibold">Code</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold">Quantity</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold">Discount</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold">Price</th>
-              <th className="px-4 py-3 text-right text-sm font-semibold">Amount</th>
-              <th className="px-4 py-3 text-center text-sm font-semibold">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cart.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="px-4 py-8 text-center text-gray-500">
-                  No items in cart
-                </td>
-              </tr>
-            ) : (
-              cart.filter(item => 
-                item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                item.code?.toLowerCase().includes(searchTerm.toLowerCase())
-              ).map((item, index) => (
-                <tr key={item.productId} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-3">{item.name}</td>
-                  <td className="px-4 py-3">{item.code}</td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => updateCartItem(item.productId, 'quantity', e.target.value)}
-                      className="w-20 border rounded px-2 py-1 text-center"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={item.discount}
-                      onChange={(e) => updateCartItem(item.productId, 'discount', e.target.value)}
-                      className="w-20 border rounded px-2 py-1 text-center"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">{item.retailPrice.toFixed(2)}</td>
-                  <td className="px-4 py-3 text-right font-medium">
-                    {calculateItemTotal(item).toFixed(2)}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => removeFromCart(item.productId, item.saleDetailId)}
-                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors text-sm"
+            {/* Add Products Button */}
+            <div className="mb-6">
+              <button
+                onClick={() => setShowProductModal(!showProductModal)}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3"
+              >
+                <Package className="w-6 h-6" />
+                Browse & Add Products to Cart
+              </button>
+            </div>
+
+            {/* Product Modal/Dropdown */}
+            {showProductModal && (
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-purple-200 shadow-lg">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-purple-900 flex items-center gap-2">
+                    <Package className="w-6 h-6" />
+                    Product Catalog
+                  </h2>
+                  <button
+                    onClick={() => setShowProductModal(false)}
+                    className="text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+                
+                <div className="relative mb-4">
+                  <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+                  <input
+                    type="text"
+                    placeholder="🔍 Search products by name or code..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="w-full border-2 border-purple-300 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-lg"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
+                  {filteredProducts.map(product => (
+                    <div
+                      key={product.productId}
+                      className="bg-white rounded-lg p-4 border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => addToCart(product)}
                     >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="bg-purple-100 rounded-lg px-3 py-1">
+                          <span className="text-purple-700 font-bold text-sm">{product.code}</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-green-600">
+                            ${product.retailPrice?.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className="font-semibold text-gray-900 mb-3">{product.name}</h3>
+                      <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center justify-center gap-2">
+                        <ShoppingCart size={16} />
+                        Add to Cart
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
-          </tbody>
-        </table>
-      </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div className="text-sm text-gray-600">
-          Showing {cart.length} of {cart.length} entries
-        </div>
-        <div className="flex gap-2">
-          <button className="px-3 py-1 border rounded text-sm">Previous</button>
-          <button className="px-3 py-1 bg-blue-500 text-white rounded text-sm">1</button>
-          <button className="px-3 py-1 border rounded text-sm">Next</button>
-        </div>
-      </div>
+            {/* Shopping Cart - MOVED UP */}
+            <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden mb-6">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <ShoppingCart className="w-6 h-6" />
+                  Shopping Cart ({cart.length} items)
+                </h2>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="text"
+                    placeholder="Search cart..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="border-2 border-white rounded-lg px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-white"
+                  />
+                </div>
+              </div>
 
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <div className="flex justify-between items-center text-lg font-semibold mb-4">
-          <span>Net Total :</span>
-          <span className="text-green-600">{calculateTotal().toFixed(2)}</span>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Product Name</th>
+                      <th className="px-6 py-4 text-left text-sm font-bold text-gray-700">Code</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Quantity</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Discount %</th>
+                      <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">Unit Price</th>
+                      <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">Total</th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-700">Remove</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cart.length === 0 ? (
+                      <tr>
+                        <td colSpan="7" className="px-6 py-12 text-center">
+                          <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                          <p className="text-gray-500 text-lg font-medium">Your cart is empty</p>
+                          <p className="text-gray-400 text-sm mt-2">Click "Browse & Add Products" to get started</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      cart.filter(item => 
+                        item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        item.code?.toLowerCase().includes(searchTerm.toLowerCase())
+                      ).map((item, index) => (
+                        <tr key={item.productId} className="border-t hover:bg-indigo-50 transition-colors">
+                          <td className="px-6 py-4 font-medium text-gray-900">{item.name}</td>
+                          <td className="px-6 py-4 text-gray-600">{item.code}</td>
+                          <td className="px-6 py-4">
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) => updateCartItem(item.productId, 'quantity', e.target.value)}
+                              className="w-24 border-2 border-indigo-200 rounded-lg px-3 py-2 text-center font-semibold focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </td>
+                          <td className="px-6 py-4">
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={item.discount}
+                              onChange={(e) => updateCartItem(item.productId, 'discount', e.target.value)}
+                              className="w-24 border-2 border-indigo-200 rounded-lg px-3 py-2 text-center font-semibold focus:ring-2 focus:ring-indigo-500"
+                            />
+                          </td>
+                          <td className="px-6 py-4 text-right font-semibold text-gray-900">
+                            ${item.retailPrice.toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-green-600 text-lg">
+                            ${calculateItemTotal(item).toFixed(2)}
+                          </td>
+                          <td className="px-6 py-4 text-center">
+                            <button
+                              onClick={() => removeFromCart(item.productId, item.saleDetailId)}
+                              className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-semibold flex items-center gap-2 mx-auto"
+                            >
+                              <Trash2 size={18} />
+                              Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Comments Section - MOVED DOWN */}
+            <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-xl p-6 mb-6 border border-gray-200">
+              <h2 className="text-lg font-bold text-gray-800 mb-3 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                Comments (Optional)
+              </h2>
+              <textarea
+                value={comments}
+                onChange={(e) => setComments(e.target.value)}
+                placeholder="Add any notes or comments about this sale..."
+                rows="3"
+                className="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none transition-all"
+              />
+            </div>
+
+            {/* Total and Save Section */}
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-8 border-2 border-green-200">
+              <div className="flex justify-between items-center mb-6">
+                <span className="text-2xl font-bold text-gray-700">Grand Total:</span>
+                <span className="text-4xl font-bold text-green-600">
+                  ${calculateTotal().toFixed(2)}
+                </span>
+              </div>
+              
+              <button
+                onClick={handleSaveRecord}
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-bold text-xl hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                {loading ? (
+                  <span className="flex items-center justify-center gap-3">
+                    <svg className="animate-spin h-6 w-6" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-3">
+                    <ShoppingCart className="w-6 h-6" />
+                    {isEditMode ? 'Update Sale Record' : 'Save Sale Record'}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
-        <button
-          onClick={handleSaveRecord}
-          disabled={loading}
-          className="w-full bg-blue-500 text-white py-3 rounded-lg font-semibold hover:bg-blue-600 disabled:opacity-50 transition-colors"
-        >
-          {loading ? 'Saving...' : (isEditMode ? 'Update Record' : 'Save Record')}
-        </button>
       </div>
     </div>
   );
