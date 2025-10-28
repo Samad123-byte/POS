@@ -142,6 +142,7 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
  // ✅ FIXED: removeFromCart function in Sales.jsx
 // Replace your existing removeFromCart function with this:
 
+
 const removeFromCart = async (productId, saleDetailId = null) => {
   if (isEditMode && saleDetailId) {
     const result = await Swal.fire({
@@ -154,19 +155,34 @@ const removeFromCart = async (productId, saleDetailId = null) => {
       confirmButtonText: 'Yes, delete it!'
     });
 
-      if (result.isConfirmed) {
-        try {
-          await saleDetailService.delete(saleDetailId);
-          setCart(cart.filter(item => item.productId !== productId));
-          Swal.fire('Deleted!', 'Item removed successfully', 'success');
-        } catch (error) {
-          Swal.fire('Error', 'Failed to delete item', 'error');
-        }
+    if (result.isConfirmed) {
+      try {
+        const response = await saleDetailService.delete(saleDetailId);
+        
+        // ✅ If we reach here, deletion was successful (status 200)
+        setCart(cart.filter(item => item.productId !== productId));
+        Swal.fire('Deleted!', response.message || 'Item removed successfully', 'success');
+      } catch (error) {
+        // ✅ Backend returns 400/error status when deletion fails
+        // Extract the error message from the response
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.Message || 
+                           error.message || 
+                           'Failed to delete item';
+        
+        Swal.fire({
+          title: 'Cannot Delete',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
       }
-    } else {
-      setCart(cart.filter(item => item.productId !== productId));
     }
-  };
+  } else {
+    // Not in edit mode, just remove from cart
+    setCart(cart.filter(item => item.productId !== productId));
+  }
+};
 
   const calculateItemTotal = (item) => {
     const subtotal = item.retailPrice * item.quantity;
