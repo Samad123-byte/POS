@@ -139,31 +139,58 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
     ));
   };
 
-  const removeFromCart = async (productId, saleDetailId = null) => {
-    if (isEditMode && saleDetailId) {
-      const result = await Swal.fire({
-        title: 'Delete this item?',
-        text: "This will remove the item from the sale",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it!'
-      });
+ // ✅ FIXED: removeFromCart function in Sales.jsx
+// Replace your existing removeFromCart function with this:
 
-      if (result.isConfirmed) {
-        try {
-          await saleDetailService.delete(saleDetailId);
+const removeFromCart = async (productId, saleDetailId = null) => {
+  if (isEditMode && saleDetailId) {
+    const result = await Swal.fire({
+      title: 'Delete this item?',
+      text: "This will remove the item from the sale",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, delete it!'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const response = await saleDetailService.delete(saleDetailId);
+        
+        // ✅ Check if deletion was successful
+        if (response.success) {
           setCart(cart.filter(item => item.productId !== productId));
-          Swal.fire('Deleted!', 'Item removed successfully', 'success');
-        } catch (error) {
-          Swal.fire('Error', 'Failed to delete item', 'error');
+          Swal.fire('Deleted!', response.message || 'Item removed successfully', 'success');
+        } else {
+          // ✅ Show backend error message
+          Swal.fire({
+            title: 'Cannot Delete',
+            text: response.message || 'Failed to delete item',
+            icon: 'error',
+            confirmButtonText: 'OK'
+          });
         }
+      } catch (error) {
+        // ✅ Show detailed error message from backend
+        const errorMessage = error.response?.data?.message || 
+                           error.response?.data?.Message || 
+                           error.message || 
+                           'Failed to delete item';
+        
+        Swal.fire({
+          title: 'Error',
+          text: errorMessage,
+          icon: 'error',
+          confirmButtonText: 'OK'
+        });
       }
-    } else {
-      setCart(cart.filter(item => item.productId !== productId));
     }
-  };
+  } else {
+    // Not in edit mode, just remove from cart
+    setCart(cart.filter(item => item.productId !== productId));
+  }
+};
 
   const calculateItemTotal = (item) => {
     const subtotal = item.retailPrice * item.quantity;
