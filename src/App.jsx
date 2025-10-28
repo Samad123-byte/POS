@@ -1,381 +1,88 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { Package, ShoppingCart, FileText, User } from 'lucide-react';
 import Products from './components/Products';
 import Sales from './components/Sales';
 import Records from './components/Records';
-import Salespersons from './components/Salespersons';
-import useProducts from './hooks/useProducts';
-import useSalespersons from './hooks/useSalespersons';
-import useSales from './hooks/useSales';
-import Swal from 'sweetalert2';
+import SaleDetailView from './components/SaleDetailView';
+import Salesperson from './components/Salesperson';
 
-const App = () => {
+function App() {
   const [activeTab, setActiveTab] = useState('products');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
-  const [editingSale, setEditingSale] = useState(null);
+  const [viewingSaleId, setViewingSaleId] = useState(null);
 
-  
-  // Track what data has been loaded to prevent duplicate calls
-  const loadedData = useRef({
-    products: false,
-    salespersons: false,
-    sales: false
-  });
-
-
-
-
-  // Custom hooks for managing state and operations
-  const {
-    products,
-    rawProducts,
-    loadProducts,
-    handleAddProduct,
-    handleUpdateProduct,
-    handleDeleteProduct,
-      currentPage: productCurrentPage,
-  pageSize: productPageSize,
-  totalRecords: productTotalRecords,
-  totalPages: productTotalPages
-  } = useProducts();
-
-  const {
-    salespersons,
-    rawSalespersons,
-    loadSalespersons,
-    handleAddSalesperson,
-    handleUpdateSalesperson,
-    handleDeleteSalesperson,
-      currentPage: salespersonCurrentPage,
-  pageSize: salespersonPageSize,
-  totalRecords: salespersonTotalRecords,
-  totalPages: salespersonTotalPages
-  } = useSalespersons();
-
-  const {
-    sales,
-    salesBasicList,
-    loadSales,
-    loadSalesBasic,
-    loadSaleDetails,
-    handleSaveSale: saveSale,
-    handleUpdateSale: updateSale,
-    handleDeleteSale: deleteSale
-  } = useSales();
-
-  // Real-time clock update
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
-
-  // Optimized data loading effect
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
-    const loadTabData = async () => {
-      try {
-        if (activeTab === 'products' && !loadedData.current.products) {
-          await loadProducts();
-          loadedData.current.products = true;
-          if (isMounted) console.log('Products page hit');
-        }
-        else if (activeTab === 'salespersons' && !loadedData.current.salespersons) {
-          await loadSalespersons();
-          loadedData.current.salespersons = true;
-          if (isMounted) console.log('Salespersons page hit');
-        }
-else if (activeTab === 'sales') {
-  // For sales page, load products, salespersons and basic sales list (NO details)
-  let productsToUse = rawProducts;
-  let salespersonsToUse = rawSalespersons;
-  
-  // Load products if not loaded
-  if (!loadedData.current.products) {
-    const productResult = await loadProducts();
-    loadedData.current.products = true;
-    productsToUse = productResult.raw;
-  }
-  
-  // Load salespersons if not loaded
-  if (!loadedData.current.salespersons) {
-    const salespersonsResult = await loadSalespersons();
-    loadedData.current.salespersons = true;
-    salespersonsToUse = salespersonsResult.raw;
-  }
-  
-  // Load basic sales list WITHOUT details
-  if (!loadedData.current.sales) {
-    await loadSalesBasic(productsToUse, salespersonsToUse); // âœ… Keep this for sales page
-    loadedData.current.sales = true;
-  }
-
-  if (isMounted) console.log('Sales page hit');
-}
-else if (activeTab === 'records') {
-  // For records page, load sales WITH details to display all records
-  let productsToUse = rawProducts;
-  let salespersonsToUse = rawSalespersons;
-  
-  // Load products if not loaded
-  if (!loadedData.current.products) {
-    const productResult = await loadProducts();
-    loadedData.current.products = true;
-    productsToUse = productResult.raw;
-  }
-  
-  // Load salespersons if not loaded
-  if (!loadedData.current.salespersons) {
-    const salespersonsResult = await loadSalespersons();
-    loadedData.current.salespersons = true;
-    salespersonsToUse = salespersonsResult.raw;
-  }
-  
-  // âœ… Load sales WITH details for displaying records
-  await loadSales(productsToUse, salespersonsToUse);
-  
-  if (isMounted) console.log('Records page hit');
-}
-      } catch (err) {
-        if (isMounted) {
-          console.error('Error loading tab data:', err);
-          Swal.fire({
-            title: 'Error!',
-            text: 'Failed to load data for the current tab.',
-            icon: 'error',
-            confirmButtonText: 'Ok'
-          });
-        }
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-
-    loadTabData();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeTab]);
-
-  // Wrapper functions to maintain the same interface
-  const handleSaveSale = (sale, isEdit) => {
-    if (isEdit) {
-      updateSale(sale, products, salespersons);
-    } else {
-      saveSale(sale, products, salespersons);
-    }
-    setEditingSale(null);
-  };
-  
-  const handleUpdateSale = (sale) => updateSale(sale, products, salespersons);
-  const handleDeleteSale = (saleId) => deleteSale(saleId);
-
-  const handleNewSale = () => {
-    setEditingSale(null);
-    setActiveTab('sales');
+  const handleViewSale = (saleId) => {
+    setViewingSaleId(saleId);
+    setActiveTab('saleDetail');
   };
 
-  const handleEditSale = (sale) => {
-    setEditingSale(sale);
-    setActiveTab('sales');
+  const handleBackToRecords = () => {
+    setViewingSaleId(null);
+    setActiveTab('records');
   };
-
-  const handleClearEdit = () => {
-    setEditingSale(null);
-  };
-
-  const menuItems = [
-    { id: 'products', label: 'Products', icon: 'ðŸ“¦' },
-    { id: 'sales', label: 'Sales', icon: 'ðŸ›’' },
-    { id: 'records', label: 'Records', icon: 'ðŸ“Š' },
-    { id: 'salespersons', label: 'SalePersons', icon: 'ðŸ‘¥' }
-  ];
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-xl shadow-lg">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-lg text-gray-600">Loading data from server...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-xl shadow-lg border border-red-200">
-          <div className="text-red-500 text-6xl mb-4">âš ï¸</div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Connection Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium"
-          >
-            Retry Connection
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 flex">
-      {/* Sidebar */}
-      <div className={`bg-white shadow-xl transition-all duration-300 ease-in-out ${sidebarCollapsed ? 'w-16' : 'w-64'} flex flex-col`}>
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <div>
-                <h1 className="text-xl font-bold text-gray-800">POS System</h1>
-                <p className="text-sm text-gray-600">Point of Sale</p>
-              </div>
-            )}
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={sidebarCollapsed ? "M9 5l7 7-7 7" : "M15 19l-7-7 7-7"} />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 py-6">
-          <ul className="space-y-2 px-4">
-            {menuItems.map(item => (
-              <li key={item.id}>
-                <button
-                  onClick={() => {
-                    if (item.id !== 'sales') {
-                      setEditingSale(null);
-                    }
-                    setActiveTab(item.id);
-                  }}
-                  className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 ${
-                    activeTab === item.id
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-indigo-600'
-                  }`}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  {!sidebarCollapsed && (
-                    <span className="ml-3 font-medium">{item.label}</span>
-                  )}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-200">
-          {!sidebarCollapsed && (
-            <div className="text-center text-xs text-gray-500">
-              <p>Version 1.0</p>
-              <p>Â© 2024 POS System</p>
-            </div>
-          )}
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white p-4 shadow-lg">
+        <h1 className="text-3xl font-bold text-center">🛒 POS System</h1>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeTab}</h2>
-              <p className="text-gray-600 text-sm">Manage your {activeTab} efficiently</p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="text-sm text-gray-600">
-                {currentTime.toLocaleDateString('en-GB', { 
-                  weekday: 'long',
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric'
-                })}
-              </div>
-              <div className="text-sm text-blue-600 font-mono bg-blue-50 px-3 py-1 rounded-lg">
-                {currentTime.toLocaleTimeString('en-GB')}
-              </div>
-              <div className="w-8 h-8 bg-indigo-600 rounded-full flex items-center justify-center">
-                <span className="text-white text-sm font-medium">A</span>
-              </div>
-            </div>
-          </div>
-        </header>
+      {/* Navigation Tabs */}
+      <div className="flex border-b bg-white shadow">
+        <button
+          onClick={() => setActiveTab('products')}
+          className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
+            activeTab === 'products' 
+              ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          <Package size={20} /> Products
+        </button>
+        <button
+          onClick={() => setActiveTab('sales')}
+          className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
+            activeTab === 'sales' 
+              ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          <ShoppingCart size={20} /> Sales
+        </button>
+        <button
+          onClick={() => setActiveTab('records')}
+          className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
+            activeTab === 'records' 
+              ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          <FileText size={20} /> Records
+        </button>
+        <button
+          onClick={() => setActiveTab('salesperson')}
+          className={`px-6 py-4 font-medium flex items-center gap-2 transition-colors ${
+            activeTab === 'salesperson' 
+              ? 'bg-indigo-600 text-white border-b-2 border-indigo-800' 
+              : 'hover:bg-gray-100 text-gray-700'
+          }`}
+        >
+          <User size={20} /> Salesperson
+        </button>
+      </div>
 
-        {/* Content Area */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-7xl mx-auto">
-          {activeTab === 'products' && (
-  <Products 
-    products={products}
-    onAddProduct={handleAddProduct}
-    onUpdateProduct={handleUpdateProduct}
-    onDeleteProduct={handleDeleteProduct}
-    currentPage={productCurrentPage}
-    pageSize={productPageSize}
-    totalRecords={productTotalRecords}
-    totalPages={productTotalPages}
-    loadProducts={loadProducts}
-  />
-)}
-            {activeTab === 'sales' && (
-              <Sales 
-                products={products}
-                salespersons={salespersons}
-                onSaveSale={handleSaveSale}
-                editingSale={editingSale}
-                onClearEdit={handleClearEdit}
-                currentTime={currentTime}
-                 loadSaleDetails={loadSaleDetails}
-              />
-            )}
-            
-            {activeTab === 'records' && (
-              <Records 
-                sales={sales}
-                products={products}
-                salespersons={salespersons}
-                onUpdateSale={handleUpdateSale}
-                onDeleteSale={handleDeleteSale}
-                onNewSale={handleNewSale}
-                onEditSale={handleEditSale}
-              />
-            )}
-            
-           {activeTab === 'salespersons' && (
-  <Salespersons 
-    salespersons={salespersons}
-    onAddSalesperson={handleAddSalesperson}
-    onUpdateSalesperson={handleUpdateSalesperson}
-    onDeleteSalesperson={handleDeleteSalesperson}
-    currentPage={salespersonCurrentPage}
-    pageSize={salespersonPageSize}
-    totalRecords={salespersonTotalRecords}
-    totalPages={salespersonTotalPages}
-    loadSalespersons={loadSalespersons}
-  />
-)}
-          </div>
-        </main>
+      {/* Content Area */}
+      <div className="container mx-auto py-6 px-4">
+        {activeTab === 'products' && <Products />}
+        {activeTab === 'sales' && <Sales />}
+        {activeTab === 'records' && <Records onViewSale={handleViewSale} />}
+        {activeTab === 'saleDetail' && viewingSaleId && (
+          <SaleDetailView saleId={viewingSaleId} onBack={handleBackToRecords} />
+        )}
+        {activeTab === 'salesperson' && <Salesperson />}
       </div>
     </div>
   );
-};
+}
 
 export default App;

@@ -1,149 +1,95 @@
-// AddProductModal.jsx - Fixed to not set edit date on creation
-import React, { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
+import React, { useState } from 'react';
+import { X } from 'lucide-react';
 
-const AddProductModal = ({ isOpen, onClose, onAdd, existingProducts }) => {
+const AddProductModal = ({ isOpen, onClose, onAdd }) => {
   const [formData, setFormData] = useState({
     name: '',
     code: '',
+    imageURL: '',
     costPrice: '',
     retailPrice: ''
   });
 
-  // Handle Escape key to close modal
-  useEffect(() => {
-    const handleEscapeKey = (event) => {
-      if (event.key === 'Escape' && isOpen) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscapeKey);
-    }
-
-    return () => {
-      document.removeEventListener('keydown', handleEscapeKey);
-    };
-  }, [isOpen, onClose]);
-
-  // Generate next ID
-  const getNextId = () => {
-    if (existingProducts.length === 0) return 1;
-    return Math.max(...existingProducts.map(p => p.id)) + 1;
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.name && formData.code && formData.costPrice && formData.retailPrice) {
-      // Check for duplicate code
-      const existingProduct = existingProducts.find(p => p.code.toLowerCase() === formData.code.toLowerCase());
-      if (existingProduct) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Duplicate Code',
-          text: 'A product with this code already exists!',
-        });
-        return;
-      }
-
-      const newProduct = {
-        id: getNextId(), // Auto-generated unique ID
-        name: formData.name,
-        code: formData.code,
-        costPrice: parseFloat(formData.costPrice),
-        retailPrice: parseFloat(formData.retailPrice),
-        creationDate: new Date().toLocaleString('en-GB', { 
-          day: '2-digit', 
-          month: '2-digit', 
-          year: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit',
-          second: '2-digit'
-        }),
-        editDate: null // Set to null for new products, only set when actually edited
-      };
-      onAdd(newProduct);
-      setFormData({ name: '', code: '', costPrice: '', retailPrice: '' });
-      onClose();
-    }
+    await onAdd(formData);
+    setFormData({ name: '', code: '', imageURL: '', costPrice: '', retailPrice: '' });
+    onClose();
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-96 shadow-xl">
-        <h3 className="text-xl font-bold mb-4 text-indigo-700">Add Product</h3>
+      <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-xl font-bold">Add Product</h3>
+          <button onClick={onClose}>
+            <X size={24} />
+          </button>
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">ID (Auto-generated)</label>
-            <input 
-              type="text" 
-              value={getNextId()}
-              disabled
-              className="w-full border border-gray-300 rounded-md px-3 py-2 bg-gray-100 cursor-not-allowed font-semibold text-blue-600"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Name</label>
-            <input 
-              type="text" 
+            <label className="block mb-2 font-medium">Name *</label>
+            <input
+              type="text"
               value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
-              placeholder="Product Name"
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full border rounded px-3 py-2"
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Code</label>
-            <input 
-              type="text" 
+            <label className="block mb-2 font-medium">Code</label>
+            <input
+              type="text"
               value={formData.code}
-              onChange={(e) => setFormData({...formData, code: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
-              placeholder="Product Code"
-              required
+              onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+              className="w-full border rounded px-3 py-2"
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Cost Price</label>
-            <input 
-              type="number" 
+            <label className="block mb-2 font-medium">Image URL</label>
+            <input
+              type="text"
+              value={formData.imageURL}
+              onChange={(e) => setFormData({ ...formData, imageURL: e.target.value })}
+              className="w-full border rounded px-3 py-2"
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block mb-2 font-medium">Cost Price</label>
+            <input
+              type="number"
               step="0.01"
               value={formData.costPrice}
-              onChange={(e) => setFormData({...formData, costPrice: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
-              placeholder="Cost Price"
-              required
+              onChange={(e) => setFormData({ ...formData, costPrice: e.target.value })}
+              className="w-full border rounded px-3 py-2"
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700 font-medium mb-1">Retail Price</label>
-            <input 
-              type="number" 
+            <label className="block mb-2 font-medium">Retail Price</label>
+            <input
+              type="number"
               step="0.01"
               value={formData.retailPrice}
-              onChange={(e) => setFormData({...formData, retailPrice: e.target.value})}
-              className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-indigo-500"
-              placeholder="Retail Price"
-              required
+              onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
+              className="w-full border rounded px-3 py-2"
             />
           </div>
-          <div className="flex gap-3">
-            <button 
+          <div className="flex gap-2">
+            <button
               type="submit"
-              className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 font-semibold"
+              className="bg-blue-500 text-white px-4 py-2 rounded flex-1 hover:bg-blue-600"
             >
-              Add
+              Create
             </button>
-            <button 
+            <button
               type="button"
               onClick={onClose}
-              className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+              className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
             >
-              Close
+              Cancel
             </button>
           </div>
         </form>

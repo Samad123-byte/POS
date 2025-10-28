@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Plus, Search } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { productService } from '../services/productService';
-import AddProductModal from './AddProductModal';
-import EditProductModal from './EditProductModal';
+import { salespersonService } from '../services/salespersonService';
+import AddSalespersonModal from './AddSalespersonModal';
+import EditSalespersonModal from './EditSalespersonModal';
 import Pagination from './Pagination';
 
-const Products = () => {
-  const [products, setProducts] = useState([]);
+const Salesperson = () => {
+  const [salespersons, setSalespersons] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
@@ -15,7 +15,7 @@ const Products = () => {
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingSalesperson, setEditingSalesperson] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
@@ -35,14 +35,14 @@ const Products = () => {
   };
 
   useEffect(() => {
-    loadProducts();
+    loadSalespersons();
   }, [currentPage]);
 
-  const loadProducts = async () => {
+  const loadSalespersons = async () => {
     setLoading(true);
     try {
-      const response = await productService.getAll(currentPage, pageSize);
-      setProducts(response.data || []);
+      const response = await salespersonService.getAll(currentPage, pageSize);
+      setSalespersons(response.data || []);
       setTotalPages(response.totalPages || 1);
       setTotalRecords(response.totalRecords || 0);
     } catch (error) {
@@ -51,37 +51,27 @@ const Products = () => {
     setLoading(false);
   };
 
-  const handleAddProduct = async (productData) => {
+  const handleAddSalesperson = async (salespersonData) => {
     try {
-      const data = {
-        ...productData,
-        costPrice: parseFloat(productData.costPrice) || 0,
-        retailPrice: parseFloat(productData.retailPrice) || 0
-      };
-      await productService.create(data);
-      Swal.fire('Success', 'Product added successfully!', 'success');
-      loadProducts();
+      await salespersonService.create(salespersonData);
+      Swal.fire('Success', 'Salesperson added successfully!', 'success');
+      loadSalespersons();
     } catch (error) {
       Swal.fire('Error', error.response?.data?.message || error.message, 'error');
     }
   };
 
-  const handleUpdateProduct = async (productData) => {
+  const handleUpdateSalesperson = async (salespersonData) => {
     try {
-      const data = {
-        ...productData,
-        costPrice: parseFloat(productData.costPrice) || 0,
-        retailPrice: parseFloat(productData.retailPrice) || 0
-      };
-      await productService.update(data);
-      Swal.fire('Success', 'Product updated successfully!', 'success');
-      loadProducts();
+      await salespersonService.update(salespersonData);
+      Swal.fire('Success', 'Salesperson updated successfully!', 'success');
+      loadSalespersons();
     } catch (error) {
       Swal.fire('Error', error.response?.data?.message || error.message, 'error');
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
+  const handleDeleteSalesperson = async (salespersonId) => {
     const result = await Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
@@ -94,10 +84,10 @@ const Products = () => {
 
     if (result.isConfirmed) {
       try {
-        const response = await productService.delete(productId);
+        const response = await salespersonService.delete(salespersonId);
         if (response.success) {
           Swal.fire('Deleted!', response.message, 'success');
-          loadProducts();
+          loadSalespersons();
         } else {
           Swal.fire('Error', response.message, 'error');
         }
@@ -107,29 +97,29 @@ const Products = () => {
     }
   };
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
+  const handleEdit = (salesperson) => {
+    setEditingSalesperson(salesperson);
     setShowEditModal(true);
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredSalespersons = salespersons.filter(sp =>
+    sp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    sp.code?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const sortedProducts = React.useMemo(() => {
-    if (!sortConfig.key) return filteredProducts;
+  const sortedSalespersons = React.useMemo(() => {
+    if (!sortConfig.key) return filteredSalespersons;
 
-    return [...filteredProducts].sort((a, b) => {
+    return [...filteredSalespersons].sort((a, b) => {
       let aValue = a[sortConfig.key];
       let bValue = b[sortConfig.key];
 
-      if (sortConfig.key === 'costPrice' || sortConfig.key === 'retailPrice') {
-        aValue = parseFloat(aValue) || 0;
-        bValue = parseFloat(bValue) || 0;
-      } else if (sortConfig.key === 'productId') {
+      if (sortConfig.key === 'salespersonId') {
         aValue = parseInt(aValue) || 0;
         bValue = parseInt(bValue) || 0;
+      } else if (sortConfig.key === 'enteredDate') {
+        aValue = new Date(aValue || '1900-01-01').getTime();
+        bValue = new Date(bValue || '1900-01-01').getTime();
       } else {
         aValue = aValue?.toString().toLowerCase() || '';
         bValue = bValue?.toString().toLowerCase() || '';
@@ -139,7 +129,7 @@ const Products = () => {
       if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
       return 0;
     });
-  }, [filteredProducts, sortConfig]);
+  }, [filteredSalespersons, sortConfig]);
 
   const handleSort = (key) => {
     let direction = 'asc';
@@ -160,21 +150,21 @@ const Products = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold text-center text-indigo-700 mb-6">Products</h2>
+      <h2 className="text-2xl font-bold text-center text-indigo-700 mb-6">Salespersons</h2>
       
       <div className="flex justify-between items-center mb-4">
         <button 
           onClick={() => setShowAddModal(true)}
           className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-md hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-semibold flex items-center gap-2"
         >
-          <Plus size={20} /> Add New Product
+          <Plus size={20} /> Add New Salesperson
         </button>
         
         <div className="relative">
           <Search className="absolute left-3 top-2.5 text-gray-400" size={20} />
           <input 
             type="text" 
-            placeholder="Search products..."
+            placeholder="Search salespersons..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border border-gray-300 rounded-md pl-10 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500"
@@ -192,9 +182,9 @@ const Products = () => {
                 <tr>
                   <th 
                     className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-                    onClick={() => handleSort('productId')}
+                    onClick={() => handleSort('salespersonId')}
                   >
-                    ID {getSortIcon('productId')}
+                    ID {getSortIcon('salespersonId')}
                   </th>
                   <th 
                     className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
@@ -210,36 +200,27 @@ const Products = () => {
                   </th>
                   <th 
                     className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-                    onClick={() => handleSort('costPrice')}
+                    onClick={() => handleSort('enteredDate')}
                   >
-                    COST PRICE {getSortIcon('costPrice')}
+                    ENTERED DATE {getSortIcon('enteredDate')}
                   </th>
-                  <th 
-                    className="border border-gray-300 px-4 py-3 font-semibold cursor-pointer hover:bg-indigo-700 transition-colors"
-                    onClick={() => handleSort('retailPrice')}
-                  >
-                    RETAIL PRICE {getSortIcon('retailPrice')}
-                  </th>
-                  <th className="border border-gray-300 px-4 py-3 font-semibold">CREATION DATE</th>
                   <th className="border border-gray-300 px-4 py-3 font-semibold">UPDATED DATE</th>
                   <th className="border border-gray-300 px-4 py-3 font-semibold">ACTION</th>
                 </tr>
               </thead>
               <tbody>
-                {sortedProducts.map(product => (
-                  <tr key={product.productId} className="border-b hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-3 font-semibold text-blue-600">{product.productId}</td>
-                    <td className="border border-gray-300 px-4 py-3">{product.name}</td>
-                    <td className="border border-gray-300 px-4 py-3">{product.code || 'N/A'}</td>
-                    <td className="border border-gray-300 px-4 py-3">${product.costPrice?.toFixed(2) || '0.00'}</td>
-                    <td className="border border-gray-300 px-4 py-3">${product.retailPrice?.toFixed(2) || '0.00'}</td>
+                {sortedSalespersons.map(sp => (
+                  <tr key={sp.salespersonId} className="border-b hover:bg-gray-50">
+                    <td className="border border-gray-300 px-4 py-3 font-semibold text-blue-600">{sp.salespersonId}</td>
+                    <td className="border border-gray-300 px-4 py-3">{sp.name}</td>
+                    <td className="border border-gray-300 px-4 py-3">{sp.code}</td>
                     <td className="border border-gray-300 px-4 py-3 text-sm">
-                      {formatDateTime(product.creationDate)}
+                      {formatDateTime(sp.enteredDate)}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-sm">
-                      {product.updatedDate ? (
+                      {sp.updatedDate ? (
                         <span className="text-green-600 font-medium">
-                          {formatDateTime(product.updatedDate)}
+                          {formatDateTime(sp.updatedDate)}
                         </span>
                       ) : (
                         <span className="text-gray-400 italic">——</span>
@@ -248,13 +229,13 @@ const Products = () => {
                     <td className="border border-gray-300 px-4 py-3">
                       <div className="flex gap-2 justify-center">
                         <button 
-                          onClick={() => handleEdit(product)}
+                          onClick={() => handleEdit(sp)}
                           className="bg-cyan-500 text-white px-3 py-1 rounded-md hover:bg-cyan-600 transition-colors duration-200 flex items-center gap-1"
                         >
                           <Edit2 size={16} /> Edit
                         </button>
                         <button 
-                          onClick={() => handleDeleteProduct(product.productId)}
+                          onClick={() => handleDeleteSalesperson(sp.salespersonId)}
                           className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600 transition-colors duration-200 flex items-center gap-1"
                         >
                           <Trash2 size={16} /> Delete
@@ -277,20 +258,20 @@ const Products = () => {
         </>
       )}
 
-      <AddProductModal 
+      <AddSalespersonModal 
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddProduct}
+        onAdd={handleAddSalesperson}
       />
 
-      <EditProductModal 
+      <EditSalespersonModal 
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
-        onUpdate={handleUpdateProduct}
-        product={editingProduct}
+        onUpdate={handleUpdateSalesperson}
+        salesperson={editingSalesperson}
       />
     </div>
   );
 };
 
-export default Products;
+export default Salesperson;
