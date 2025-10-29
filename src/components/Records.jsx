@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { saleService } from '../services/saleService';
-import { salespersonService } from '../services/salespersonService';
+//import { salespersonService } from '../services/salespersonService';
 import Pagination from './Pagination';
 
 const Records = ({ onEditSale }) => {
@@ -151,11 +151,13 @@ const Records = ({ onEditSale }) => {
                             <div className="flex items-center gap-2">
                               <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center">
                                 <span className="text-purple-700 font-bold text-sm">
-                                  {getSalespersonName(sale.salespersonId).charAt(0)}
+                              {(sale.salespersonName || "N/A").charAt(0)}
+
                                 </span>
                               </div>
                               <span className="font-semibold text-gray-900">
-                                {getSalespersonName(sale.salespersonId)}
+                          {sale.salespersonName || "N/A"}
+
                               </span>
                             </div>
                           </td>

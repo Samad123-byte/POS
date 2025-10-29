@@ -202,90 +202,94 @@ const removeFromCart = async (productId, saleDetailId = null) => {
     return cart.reduce((total, item) => total + calculateItemTotal(item), 0);
   };
 
-  const handleSaveRecord = async () => {
-    if (!selectedSalesperson) {
-      Swal.fire('Warning', 'Please select a salesperson', 'warning');
-      return;
-    }
-    if (cart.length === 0) {
-      Swal.fire('Warning', 'Please add products to cart', 'warning');
-      return;
-    }
+ const handleSaveRecord = async () => {
+  if (!selectedSalesperson) {
+    Swal.fire('Warning', 'Please select a salesperson', 'warning');
+    return;
+  }
+  if (cart.length === 0) {
+    Swal.fire('Warning', 'Please add products to cart', 'warning');
+    return;
+  }
 
-    setLoading(true);
-    try {
-      if (isEditMode && currentSaleId) {
-        const saleData = {
-          saleId: currentSaleId,
-          salespersonId: parseInt(selectedSalesperson),
-          total: calculateTotal(),
-          saleDate: new Date().toISOString(),
-          comments: comments || null,
-          updatedDate: new Date().toISOString()
-        };
+  setLoading(true);
+  try {
+    // ✅ Always use UTC when sending to backend
+    const utcNow = new Date().toISOString();
 
-        await saleService.update(currentSaleId, saleData);
-        
-        for (const item of cart) {
-          if (item.saleDetailId) {
-            await saleDetailService.update({
-              saleDetailId: item.saleDetailId,
-              saleId: currentSaleId,
-              productId: item.productId,
-              retailPrice: item.retailPrice,
-              quantity: item.quantity,
-              discount: item.discount || 0
-            });
-          } else {
-            await saleDetailService.add({
-              saleId: currentSaleId,
-              productId: item.productId,
-              retailPrice: item.retailPrice,
-              quantity: item.quantity,
-              discount: item.discount || 0
-            });
-          }
+    if (isEditMode && currentSaleId) {
+      const saleData = {
+        saleId: currentSaleId,
+        salespersonId: parseInt(selectedSalesperson),
+        total: calculateTotal(),
+        saleDate: utcNow, // ✅ send UTC time
+        comments: comments || null,
+        updatedDate: utcNow
+      };
+
+      await saleService.update(currentSaleId, saleData);
+
+      for (const item of cart) {
+        if (item.saleDetailId) {
+          await saleDetailService.update({
+            saleDetailId: item.saleDetailId,
+            saleId: currentSaleId,
+            productId: item.productId,
+            retailPrice: item.retailPrice,
+            quantity: item.quantity,
+            discount: item.discount || 0
+          });
+        } else {
+          await saleDetailService.add({
+            saleId: currentSaleId,
+            productId: item.productId,
+            retailPrice: item.retailPrice,
+            quantity: item.quantity,
+            discount: item.discount || 0
+          });
         }
-        
-        Swal.fire('Success', 'Sale updated successfully!', 'success');
-      } else {
-        const saleData = {
-          salespersonId: parseInt(selectedSalesperson),
-          total: calculateTotal(),
-          saleDate: new Date().toISOString(),
-          comments: comments || null
-        };
-
-        const saleResponse = await saleService.create(saleData);
-        
-        const saleDetails = cart.map(item => ({
-          saleId: saleResponse.saleId,
-          productId: item.productId,
-          retailPrice: item.retailPrice,
-          quantity: item.quantity,
-          discount: item.discount || 0
-        }));
-
-        await saleDetailService.createBatch(saleDetails);
-        
-        Swal.fire('Success', 'Sale created successfully!', 'success');
       }
+
+      Swal.fire('Success', 'Sale updated successfully!', 'success');
+    } else {
+      const saleData = {
+        salespersonId: parseInt(selectedSalesperson),
+        total: calculateTotal(),
       
-      setCart([]);
-      setSelectedSalesperson('');
-      setComments('');
-      setIsEditMode(false);
-      setCurrentSaleId(null);
-      
-      if (onBackToRecords) {
-        onBackToRecords();
-      }
-    } catch (error) {
-      console.error('Save error:', error);
-      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+        comments: comments || null
+      };
+
+      const saleResponse = await saleService.create(saleData);
+
+      const saleDetails = cart.map(item => ({
+        saleId: saleResponse.saleId,
+        productId: item.productId,
+        retailPrice: item.retailPrice,
+        quantity: item.quantity,
+        discount: item.discount || 0
+      }));
+
+      await saleDetailService.createBatch(saleDetails);
+
+      Swal.fire('Success', 'Sale created successfully!', 'success');
     }
-    setLoading(false);
-  };
+
+    // ✅ Reset states
+    setCart([]);
+    setSelectedSalesperson('');
+    setComments('');
+    setIsEditMode(false);
+    setCurrentSaleId(null);
+
+    if (onBackToRecords) {
+      onBackToRecords();
+    }
+  } catch (error) {
+    console.error('Save error:', error);
+    Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+  }
+  setLoading(false);
+};
 
   const filteredProducts = products.filter(product =>
     product.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
