@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, User } from 'lucide-react';
+import Swal from 'sweetalert2';
 
-const AddSalespersonModal = ({ isOpen, onClose, onAdd }) => {
+
+const AddSalespersonModal = ({ isOpen, onClose, onAdd, existingSalespersons = [] }) => { // 👈 added prop
   const [formData, setFormData] = useState({
     name: '',
     code: ''
@@ -9,12 +11,28 @@ const AddSalespersonModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ Check for duplicate code (case-insensitive)
+    const isDuplicate = existingSalespersons.some(
+      (sp) => sp.code.toLowerCase() === formData.code.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Code',
+        text: 'This salesperson code already exists. Please enter a unique one.',
+      });
+      return; // stop submission
+    }
+
     await onAdd(formData);
     setFormData({ name: '', code: '' });
     onClose();
   };
 
   if (!isOpen) return null;
+
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">

@@ -349,7 +349,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3"
               >
                 <Package className="w-6 h-6" />
-                Browse & Add Products to Cart
+          Add Items to Sale
               </button>
             </div>
 
@@ -359,7 +359,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-bold text-purple-900 flex items-center gap-2">
                     <Package className="w-6 h-6" />
-                    Product Catalog
+                   Product List
                   </h2>
                   <button
                     onClick={() => setShowProductModal(false)}
@@ -400,7 +400,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
                       <h3 className="font-semibold text-gray-900 mb-3">{product.name}</h3>
                       <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center justify-center gap-2">
                         <ShoppingCart size={16} />
-                        Add to Cart
+                        Add to Sale
                       </button>
                     </div>
                   ))}
@@ -413,12 +413,12 @@ const removeFromCart = async (productId, saleDetailId = null) => {
               <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <ShoppingCart className="w-6 h-6" />
-                  Shopping Cart ({cart.length} items)
+                 Sale Items ({cart.length} items)
                 </h2>
                 <div className="flex items-center gap-4">
                   <input
                     type="text"
-                    placeholder="Search cart..."
+                    placeholder="Search items in sale…"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="border-2 border-white rounded-lg px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-white"
@@ -504,7 +504,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                 </svg>
-                Comments (Optional)
+                Sale Notes (Optional)
               </h2>
               <textarea
                 value={comments}
@@ -540,7 +540,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
                 ) : (
                   <span className="flex items-center justify-center gap-3">
                     <ShoppingCart className="w-6 h-6" />
-                    {isEditMode ? 'Update Sale Record' : 'Save Sale Record'}
+                    {isEditMode ? 'Update Sale Record' : 'Finalize Sale'}
                   </span>
                 )}
               </button>

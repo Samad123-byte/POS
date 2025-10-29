@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { X, Package } from 'lucide-react';
+import Swal from 'sweetalert2';
 
-const AddProductModal = ({ isOpen, onClose, onAdd }) => {
+
+const AddProductModal = ({ isOpen, onClose, onAdd, existingProducts = [] }) => { // 👈 added prop
   const [formData, setFormData] = useState({
     name: '',
     code: '',
@@ -11,6 +13,35 @@ const AddProductModal = ({ isOpen, onClose, onAdd }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // ✅ Check duplicate by code (case-insensitive)
+    const isDuplicate = existingProducts.some(
+      (p) => p.code && p.code.toLowerCase() === formData.code.toLowerCase()
+    );
+
+    if (isDuplicate) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Code',
+        text: 'This product code already exists. Please enter a unique one.',
+      });
+      return; // stop submission
+    }
+
+    // ✅ Optional: check duplicate by name
+    const isNameDuplicate = existingProducts.some(
+      (p) => p.name.toLowerCase() === formData.name.toLowerCase()
+    );
+
+    if (isNameDuplicate) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Duplicate Name',
+        text: 'A product with this name already exists. Please confirm it’s not a duplicate.',
+      });
+      return;
+    }
+
     await onAdd(formData);
     setFormData({ name: '', code: '', costPrice: '', retailPrice: '' });
     onClose();

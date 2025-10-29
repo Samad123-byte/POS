@@ -20,8 +20,9 @@ export const productService = {
     return res.data;
   },
   delete: async (id) => {
-    const res = await apiClient.post('/Products/delete', id);
-    return res.data;
-  }
+  const res = await apiClient.post('/Products/delete', { id }); // <-- wrap in object
+  return res.data;
+}
+
 };
 

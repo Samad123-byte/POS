@@ -322,6 +322,7 @@ const Salesperson = () => {
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddSalesperson}
+            existingSalespersons={salespersons}
         />
 
         <EditSalespersonModal 

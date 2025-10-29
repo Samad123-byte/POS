@@ -340,6 +340,7 @@ const Products = () => {
           isOpen={showAddModal}
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddProduct}
+           existingProducts={products}
         />
 
         <EditProductModal 
