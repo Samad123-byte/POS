@@ -31,6 +31,10 @@ export const saleDetailService = {
     const res = await apiClient.post('/SaleDetails/batch', saleDetails);
     return res.data;
   },
+   batchUpdate: async (saleDetails) => {
+    const res = await apiClient.post('/SaleDetails/batchUpdate', saleDetails);
+    return res.data;
+  },
   deleteSaleDetailsBySaleId: async (saleId) => {
     const res = await apiClient.delete(`/SaleDetails/deletebysale/${saleId}`);
     return res.data;

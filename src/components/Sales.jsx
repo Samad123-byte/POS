@@ -21,17 +21,30 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [currentSalesperson, setCurrentSalesperson] = useState(null);
 const [saleDate, setSaleDate] = useState(''); // NEW
 
-
 useEffect(() => {
   const initializeComponent = async () => {
-    const spResponse = await salespersonService.getAll(1, 100);
-    const spList = spResponse.data || [];
-    setSalespersons(spList);
+    setLoading(true);
+    try {
+     const [spResponse, productResponse] = await Promise.all([
+  salespersonService.getAll(1, 100),
+  productService.getAll(1, 100)
+]);
 
-    await fetchProducts();
+const spList = spResponse.data || [];
+const productList = productResponse.data || [];
 
-    if (editingSaleId) {
-      await loadSaleForEdit(editingSaleId, spList); // pass loaded salespersons
+setSalespersons(spList);
+setProducts(productList);
+
+// ✅ If editing, load sale details
+if (editingSaleId) {
+  await loadSaleForEdit(editingSaleId, spList);
+}
+    } catch (error) {
+      console.error('Error initializing component:', error);
+      Swal.fire('Error', 'Failed to load initial data', 'error');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -39,28 +52,33 @@ useEffect(() => {
 }, [editingSaleId]);
 
 
- const loadSaleForEdit = async (saleId, spList) => {
+const loadSaleForEdit = async (saleId, spList) => {
   setLoading(true);
   try {
-    const detailsResponse = await saleDetailService.getSaleDetailsBySaleId(saleId);
-    const saleResponse = await saleService.getById(saleId);
+    // Fetch sale + details in one API call
+    const saleResponse = await saleService.getWithDetails(saleId);
+
+    if (!saleResponse.success) {
+      throw new Error(saleResponse.message || 'Failed to fetch sale with details');
+    }
+
+    const saleData = saleResponse.data;
 
     // Use passed salespersons
-    const salespersonObj = spList.find(sp => sp.salespersonId === saleResponse.salespersonId);
+    const salespersonObj = spList.find(sp => sp.salespersonId === saleData.salespersonId);
 
     setCurrentSaleId(saleId);
     setIsEditMode(true);
-    setSelectedSalesperson(saleResponse.salespersonId?.toString() || '');
+    setSelectedSalesperson(saleData.salespersonId?.toString() || '');
     setCurrentSalesperson(salespersonObj || null);
-    setComments(saleResponse.comments || '');
-    setSaleDate(saleResponse.saleDate || ''); // store original sale date
-
+    setComments(saleData.comments || '');
+    setSaleDate(saleData.saleDate || ''); // store original sale date
 
     const productsResponse = await productService.getAll(1, 1000);
     const allProducts = productsResponse.data || [];
 
-    const cartItems = Array.isArray(detailsResponse)
-      ? detailsResponse.map(detail => {
+    const cartItems = Array.isArray(saleData.details)
+      ? saleData.details.map(detail => {
           const product = allProducts.find(p => p.productId === detail.productId);
           return {
             saleDetailId: detail.saleDetailId,
@@ -73,6 +91,7 @@ useEffect(() => {
           };
         })
       : [];
+
     setCart(cartItems);
 
   } catch (error) {
@@ -85,6 +104,12 @@ useEffect(() => {
 };
 
 
+const openProductModal = async () => {
+   if (products.length === 0) {
+    await fetchProducts(); // fetch only when needed
+  }
+  setShowProductModal(true);
+};
 
 
   const fetchSalespersons = async () => {
@@ -216,34 +241,43 @@ const handleSaveRecord = async () => {
         saleId: currentSaleId,
         salespersonId: parseInt(selectedSalesperson),
         total: calculateTotal(),
-    saleDate: saleDate || new Date().toISOString(),
-
+        saleDate: saleDate || new Date().toISOString(),
         comments: comments || null,
-         updatedDate: new Date().toISOString()     
+        updatedDate: new Date().toISOString()
       };
 
-      const updateResponse = await saleService.update(currentSaleId, saleData);
+      // Update the sale itself
+      await saleService.update(currentSaleId, saleData);
 
-      // No need to check SaleId, it's update
-      for (const item of cart) {
-        if (item.saleDetailId) {
-          await saleDetailService.update({
+      // Split cart into existing and new items
+      const existingItems = cart.filter(item => item.saleDetailId);
+      const newItems = cart.filter(item => !item.saleDetailId);
+
+      // Batch update existing items
+      if (existingItems.length > 0) {
+        await saleDetailService.batchUpdate(
+          existingItems.map(item => ({
             saleDetailId: item.saleDetailId,
             saleId: currentSaleId,
             productId: item.productId,
             retailPrice: item.retailPrice,
             quantity: item.quantity,
             discount: item.discount || 0
-          });
-        } else {
-          await saleDetailService.add({
+          }))
+        );
+      }
+
+      // Batch create new items
+      if (newItems.length > 0) {
+        await saleDetailService.createBatch(
+          newItems.map(item => ({
             saleId: currentSaleId,
             productId: item.productId,
             retailPrice: item.retailPrice,
             quantity: item.quantity,
             discount: item.discount || 0
-          });
-        }
+          }))
+        );
       }
 
       Swal.fire('Success', 'Sale updated successfully!', 'success');
@@ -256,14 +290,13 @@ const handleSaveRecord = async () => {
       };
 
       const saleResponse = await saleService.create(saleData);
-
-      // ✅ Extract actual Sale object from response
       const saleDataFromServer = saleResponse.data;
 
       if (!saleDataFromServer || !saleDataFromServer.saleId) {
         throw new Error('Failed to create sale. SaleId not returned.');
       }
 
+      // Batch create all sale details
       const saleDetails = cart.map(item => ({
         saleId: saleDataFromServer.saleId,
         productId: item.productId,
@@ -361,7 +394,7 @@ const handleSaveRecord = async () => {
 {/* Add Products Button */}
 <div className="mb-6">
   <button
-    onClick={() => setShowProductModal(true)}
+    onClick={openProductModal}
     className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3"
   >
     <Package className="w-6 h-6" />
