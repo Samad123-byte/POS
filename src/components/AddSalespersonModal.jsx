@@ -1,38 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, User } from 'lucide-react';
 import Swal from 'sweetalert2';
 
-
-const AddSalespersonModal = ({ isOpen, onClose, onAdd, existingSalespersons = [] }) => { // 👈 added prop
+const AddSalespersonModal = ({ isOpen, onClose, onAdd, existingSalespersons = [] }) => {
   const [formData, setFormData] = useState({
     name: '',
     code: ''
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    // ✅ Check for duplicate code (case-insensitive)
-    const isDuplicate = existingSalespersons.some(
-      (sp) => sp.code.toLowerCase() === formData.code.toLowerCase()
-    );
-
-    if (isDuplicate) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Duplicate Code',
-        text: 'This salesperson code already exists. Please enter a unique one.',
-      });
-      return; // stop submission
+  // ✅ Reset form when modal opens/closes
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({ name: '', code: '' });
     }
+  }, [isOpen]);
+const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    await onAdd(formData);
+  try {
+    await onAdd(formData); // already handles success & Swal
     setFormData({ name: '', code: '' });
     onClose();
-  };
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: err.message || 'Something went wrong.',
+    });
+  }
+};
+
 
   if (!isOpen) return null;
-
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -46,7 +45,7 @@ const AddSalespersonModal = ({ isOpen, onClose, onAdd, existingSalespersons = []
               </div>
               <h3 className="text-2xl font-bold text-white">Add Salesperson</h3>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="text-white hover:bg-white/20 p-2 rounded-lg transition-colors"
             >

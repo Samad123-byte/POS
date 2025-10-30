@@ -50,22 +50,32 @@ const Products = () => {
     setLoading(false);
   };
 
-  const handleAddProduct = async (productData) => {
-    try {
-      const data = {
-        ...productData,
-        costPrice: parseFloat(productData.costPrice) || 0,
-        retailPrice: parseFloat(productData.retailPrice) || 0
-      };
-      await productService.create(data);
-      Swal.fire('Success', 'Product added successfully!', 'success');
-      // ✅ Go to page 1 to see new product at top
-      setCurrentPage(1);
+const handleAddProduct = async (productData) => {
+  try {
+    const data = {
+      ...productData,
+      costPrice: parseFloat(productData.costPrice) || 0,
+      retailPrice: parseFloat(productData.retailPrice) || 0
+    };
+
+    // ✅ Call the service and get the backend response
+    const res = await productService.create(data);
+
+    if (res.success) {
+      Swal.fire('Success', res.message || 'Product added successfully!', 'success');
+      setCurrentPage(1); // optional: go to first page to see new product
       loadProducts();
-    } catch (error) {
-      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+    } else {
+      Swal.fire('Error', res.message || 'Failed to create product', 'error');
     }
-  };
+
+    return res; // ✅ important: return response for modal
+  } catch (error) {
+    const message = error.response?.data?.message || error.message || 'Something went wrong';
+    Swal.fire('Error', message, 'error');
+    return { success: false, message };
+  }
+};
 
   const handleUpdateProduct = async (productData) => {
     try {

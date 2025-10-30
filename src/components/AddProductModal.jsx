@@ -11,41 +11,38 @@ const AddProductModal = ({ isOpen, onClose, onAdd, existingProducts = [] }) => {
     retailPrice: ''
   });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+ const handleSubmit = async (e) => {
+  e.preventDefault();
 
-    // ✅ Check duplicate by code (case-insensitive)
-    const isDuplicate = existingProducts.some(
-      (p) => p.code && p.code.toLowerCase() === formData.code.toLowerCase()
-    );
+  try {
+    // Call backend service
+    const res = await onAdd(formData); // productService.create(formData)
 
-    if (isDuplicate) {
+    // res comes from backend: { success, message, ... }
+    if (res.success) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Product Created',
+        text: res.message || 'Product added successfully!',
+      });
+      setFormData({ name: '', code: '', costPrice: '', retailPrice: '' });
+      onClose();
+    } else {
+      // Backend reported error (like duplicate)
       Swal.fire({
         icon: 'error',
-        title: 'Duplicate Code',
-        text: 'This product code already exists. Please enter a unique one.',
+        title: 'Error',
+        text: res.message || 'Failed to create product.',
       });
-      return; // stop submission
     }
-
-    // ✅ Optional: check duplicate by name
-    const isNameDuplicate = existingProducts.some(
-      (p) => p.name.toLowerCase() === formData.name.toLowerCase()
-    );
-
-    if (isNameDuplicate) {
-      Swal.fire({
-        icon: 'warning',
-        title: 'Duplicate Name',
-        text: 'A product with this name already exists. Please confirm it’s not a duplicate.',
-      });
-      return;
-    }
-
-    await onAdd(formData);
-    setFormData({ name: '', code: '', costPrice: '', retailPrice: '' });
-    onClose();
-  };
+  } catch (err) {
+    Swal.fire({
+      icon: 'error',
+      title: 'Error',
+      text: err.message || 'Something went wrong.',
+    });
+  }
+};
 
   if (!isOpen) return null;
 

@@ -11,7 +11,8 @@ const EditProductModal = ({ isOpen, onClose, onUpdate, product }) => {
   });
 
   useEffect(() => {
-    if (product) {
+    // Fill form when modal opens with product data
+    if (isOpen && product) {
       setFormData({
         productId: product.productId,
         name: product.name,
@@ -20,7 +21,18 @@ const EditProductModal = ({ isOpen, onClose, onUpdate, product }) => {
         retailPrice: product.retailPrice || ''
       });
     }
-  }, [product]);
+
+    // Reset form when modal closes
+    if (!isOpen) {
+      setFormData({
+        productId: '',
+        name: '',
+        code: '',
+        costPrice: '',
+        retailPrice: ''
+      });
+    }
+  }, [isOpen, product]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

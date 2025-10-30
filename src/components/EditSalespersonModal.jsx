@@ -8,15 +8,24 @@ const EditSalespersonModal = ({ isOpen, onClose, onUpdate, salesperson }) => {
     code: ''
   });
 
-  useEffect(() => {
-    if (salesperson) {
-      setFormData({
-        salespersonId: salesperson.salespersonId,
-        name: salesperson.name,
-        code: salesperson.code
-      });
-    }
-  }, [salesperson]);
+ useEffect(() => {
+  if (isOpen && salesperson) {
+    setFormData({
+      salespersonId: salesperson.salespersonId,
+      name: salesperson.name,
+      code: salesperson.code
+    });
+  }
+  // Reset form when modal closes
+  if (!isOpen) {
+    setFormData({
+      salespersonId: '',
+      name: '',
+      code: ''
+    });
+  }
+}, [isOpen, salesperson]);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();

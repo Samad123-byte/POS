@@ -18,80 +18,74 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [currentSaleId, setCurrentSaleId] = useState(null);
   const [showProductModal, setShowProductModal] = useState(false);
+  const [currentSalesperson, setCurrentSalesperson] = useState(null);
+const [saleDate, setSaleDate] = useState(''); // NEW
 
-  useEffect(() => {
-    const initializeComponent = async () => {
-      await fetchSalespersons();
-      await fetchProducts();
-      
-      if (editingSaleId) {
-        await loadSaleForEdit(editingSaleId);
-      }
-    };
-    
-    initializeComponent();
-  }, [editingSaleId]);
 
-  const loadSaleForEdit = async (saleId) => {
-    setLoading(true);
-    try {
-      const detailsResponse = await saleDetailService.getSaleDetailsBySaleId(saleId);
-      
-      if (!detailsResponse || (Array.isArray(detailsResponse) && detailsResponse.length === 0)) {
-        throw new Error('No sale details found for this sale ID');
-      }
-      
-      let saleResponse;
-      try {
-        saleResponse = await saleService.getById(saleId);
-      } catch (saleError) {
-        console.warn('Could not fetch sale record, using details only');
-        const firstDetail = Array.isArray(detailsResponse) ? detailsResponse[0] : detailsResponse;
-        saleResponse = {
-          saleId: saleId,
-          salespersonId: firstDetail.salespersonId || '',
-          total: 0,
-          comments: ''
-        };
-      }
-      
-      setIsEditMode(true);
-      setCurrentSaleId(saleId);
-      setSelectedSalesperson(saleResponse.salespersonId?.toString() || '');
-      setComments(saleResponse.comments || '');
-      
-      const productsResponse = await productService.getAll(1, 1000);
-      const allProducts = productsResponse.data || [];
-      
-      const cartItems = Array.isArray(detailsResponse) ? detailsResponse.map(detail => {
-        const product = allProducts.find(p => p.productId === detail.productId);
-        return {
-          saleDetailId: detail.saleDetailId,
-          productId: detail.productId,
-          name: product?.name || `Product ${detail.productId}`,
-          code: product?.code || '',
-          retailPrice: detail.retailPrice || 0,
-          quantity: detail.quantity || 1,
-          discount: detail.discount || 0
-        };
-      }) : [];
-      
-      setCart(cartItems);
-    } catch (error) {
-      console.error('Error loading sale:', error);
-      Swal.fire({
-        title: 'Error',
-        text: error.response?.data?.message || error.message || 'Failed to load sale details',
-        icon: 'error',
-        confirmButtonText: 'Go Back'
-      }).then(() => {
-        if (onBackToRecords) {
-          onBackToRecords();
-        }
-      });
+useEffect(() => {
+  const initializeComponent = async () => {
+    const spResponse = await salespersonService.getAll(1, 100);
+    const spList = spResponse.data || [];
+    setSalespersons(spList);
+
+    await fetchProducts();
+
+    if (editingSaleId) {
+      await loadSaleForEdit(editingSaleId, spList); // pass loaded salespersons
     }
-    setLoading(false);
   };
+
+  initializeComponent();
+}, [editingSaleId]);
+
+
+ const loadSaleForEdit = async (saleId, spList) => {
+  setLoading(true);
+  try {
+    const detailsResponse = await saleDetailService.getSaleDetailsBySaleId(saleId);
+    const saleResponse = await saleService.getById(saleId);
+
+    // Use passed salespersons
+    const salespersonObj = spList.find(sp => sp.salespersonId === saleResponse.salespersonId);
+
+    setCurrentSaleId(saleId);
+    setIsEditMode(true);
+    setSelectedSalesperson(saleResponse.salespersonId?.toString() || '');
+    setCurrentSalesperson(salespersonObj || null);
+    setComments(saleResponse.comments || '');
+    setSaleDate(saleResponse.saleDate || ''); // store original sale date
+
+
+    const productsResponse = await productService.getAll(1, 1000);
+    const allProducts = productsResponse.data || [];
+
+    const cartItems = Array.isArray(detailsResponse)
+      ? detailsResponse.map(detail => {
+          const product = allProducts.find(p => p.productId === detail.productId);
+          return {
+            saleDetailId: detail.saleDetailId,
+            productId: detail.productId,
+            name: product?.name || `Product ${detail.productId}`,
+            code: product?.code || '',
+            retailPrice: detail.retailPrice || 0,
+            quantity: detail.quantity || 1,
+            discount: detail.discount || 0
+          };
+        })
+      : [];
+    setCart(cartItems);
+
+  } catch (error) {
+    console.error('Error loading sale:', error);
+    Swal.fire('Error', error.message, 'error');
+    if (onBackToRecords) onBackToRecords();
+  } finally {
+    setLoading(false);
+  }
+};
+
+
+
 
   const fetchSalespersons = async () => {
     try {
@@ -130,7 +124,7 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
       }]);
     }
     setProductSearch('');
-    setShowProductModal(false);
+   // setShowProductModal(false);
   };
 
   const updateCartItem = (productId, field, value) => {
@@ -202,7 +196,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
     return cart.reduce((total, item) => total + calculateItemTotal(item), 0);
   };
 
- const handleSaveRecord = async () => {
+const handleSaveRecord = async () => {
   if (!selectedSalesperson) {
     Swal.fire('Warning', 'Please select a salesperson', 'warning');
     return;
@@ -214,21 +208,23 @@ const removeFromCart = async (productId, saleDetailId = null) => {
 
   setLoading(true);
   try {
-    // ✅ Always use UTC when sending to backend
     const utcNow = new Date().toISOString();
 
     if (isEditMode && currentSaleId) {
+      // ===== UPDATE SALE =====
       const saleData = {
         saleId: currentSaleId,
         salespersonId: parseInt(selectedSalesperson),
         total: calculateTotal(),
-        saleDate: utcNow, // ✅ send UTC time
+    saleDate: saleDate || new Date().toISOString(),
+
         comments: comments || null,
-        updatedDate: utcNow
+         updatedDate: new Date().toISOString()     
       };
 
-      await saleService.update(currentSaleId, saleData);
+      const updateResponse = await saleService.update(currentSaleId, saleData);
 
+      // No need to check SaleId, it's update
       for (const item of cart) {
         if (item.saleDetailId) {
           await saleDetailService.update({
@@ -252,17 +248,24 @@ const removeFromCart = async (productId, saleDetailId = null) => {
 
       Swal.fire('Success', 'Sale updated successfully!', 'success');
     } else {
+      // ===== CREATE SALE =====
       const saleData = {
         salespersonId: parseInt(selectedSalesperson),
         total: calculateTotal(),
-      
         comments: comments || null
       };
 
       const saleResponse = await saleService.create(saleData);
 
+      // ✅ Extract actual Sale object from response
+      const saleDataFromServer = saleResponse.data;
+
+      if (!saleDataFromServer || !saleDataFromServer.saleId) {
+        throw new Error('Failed to create sale. SaleId not returned.');
+      }
+
       const saleDetails = cart.map(item => ({
-        saleId: saleResponse.saleId,
+        saleId: saleDataFromServer.saleId,
         productId: item.productId,
         retailPrice: item.retailPrice,
         quantity: item.quantity,
@@ -274,7 +277,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
       Swal.fire('Success', 'Sale created successfully!', 'success');
     }
 
-    // ✅ Reset states
+    // ===== RESET STATES =====
     setCart([]);
     setSelectedSalesperson('');
     setComments('');
@@ -288,8 +291,10 @@ const removeFromCart = async (productId, saleDetailId = null) => {
     console.error('Save error:', error);
     Swal.fire('Error', error.response?.data?.message || error.message, 'error');
   }
+
   setLoading(false);
 };
+
 
   const filteredProducts = products.filter(product =>
     product.name?.toLowerCase().includes(productSearch.toLowerCase()) ||
@@ -322,96 +327,143 @@ const removeFromCart = async (productId, saleDetailId = null) => {
             </div>
           </div>
 
-          <div className="p-8">
-            {/* Salesperson Selection */}
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
-              <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Salesperson
-              </h2>
-              
-              <select
-                value={selectedSalesperson}
-                onChange={(e) => setSelectedSalesperson(e.target.value)}
-                className="w-full border-2 border-indigo-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-lg font-medium"
-              >
-                <option value="">-- Select Salesperson --</option>
-                {salespersons.map(sp => (
-                  <option key={sp.salespersonId} value={sp.salespersonId}>
-                    {sp.name} ({sp.code})
-                  </option>
-                ))}
-              </select>
-            </div>
+         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
+  <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+    </svg>
+    Salesperson
+  </h2>
 
-            {/* Add Products Button */}
-            <div className="mb-6">
-              <button
-                onClick={() => setShowProductModal(!showProductModal)}
-                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3"
-              >
-                <Package className="w-6 h-6" />
-          Add Items to Sale
-              </button>
-            </div>
+  {isEditMode && currentSalesperson ? (
+    <div className="text-lg font-semibold text-indigo-700">
+      {currentSalesperson.name} ({currentSalesperson.code})
+    </div>
+  ) : (
+    <select
+      value={selectedSalesperson}
+      onChange={(e) => setSelectedSalesperson(e.target.value)}
+      className="w-full border-2 border-indigo-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-lg font-medium"
+    >
+      <option value="">-- Select Salesperson --</option>
+      {salespersons.map(sp => (
+        <option key={sp.salespersonId} value={sp.salespersonId}>
+          {sp.name} ({sp.code})
+        </option>
+      ))}
+    </select>
+  )}
+</div>
 
-            {/* Product Modal/Dropdown */}
-            {showProductModal && (
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 mb-6 border-2 border-purple-200 shadow-lg">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-bold text-purple-900 flex items-center gap-2">
-                    <Package className="w-6 h-6" />
-                   Product List
-                  </h2>
-                  <button
-                    onClick={() => setShowProductModal(false)}
-                    className="text-gray-500 hover:text-gray-700 transition-colors"
-                  >
-                    <X size={24} />
-                  </button>
+
+           {/* Add Products Button */}
+
+{/* Add Products Button */}
+<div className="mb-6">
+  <button
+    onClick={() => setShowProductModal(true)}
+    className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-4 rounded-xl font-bold text-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3"
+  >
+    <Package className="w-6 h-6" />
+    Add Items to Sale
+  </button>
+</div>
+
+{/* Popup Modal */}
+{showProductModal && (
+  <div
+    className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
+    onClick={(e) => {
+      // Optional: close only if clicking on the background
+      if (e.target === e.currentTarget) setShowProductModal(false);
+    }}
+  >
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl shadow-2xl w-[95%] max-w-4xl p-6 relative animate-fadeIn border-2 border-purple-200">
+
+      {/* Close Button */}
+      <button
+        onClick={() => setShowProductModal(false)}
+        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 transition-colors"
+      >
+        <X size={28} />
+      </button>
+
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-5">
+        <Package className="w-7 h-7 text-purple-600" />
+        <h2 className="text-2xl font-extrabold text-purple-900">Select Products</h2>
+      </div>
+
+      {/* Search Bar */}
+      <div className="relative mb-6">
+        <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+        <input
+          type="text"
+          placeholder="🔍 Search products by name or code..."
+          value={productSearch}
+          onChange={(e) => setProductSearch(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault(); // ✅ stops form submit or modal close
+              const match = filteredProducts.find(
+                (p) =>
+                  p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                  p.code.toLowerCase() === productSearch.toLowerCase()
+              );
+              if (match) {
+                addToCart(match);
+                setProductSearch(""); // Clear input after adding
+              }
+            }
+          }}
+          className="w-full border-2 border-purple-300 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-lg shadow-sm"
+        />
+      </div>
+
+      {/* Product Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[60vh] overflow-y-auto">
+        {filteredProducts.length === 0 ? (
+          <p className="text-center text-gray-500 col-span-full">
+            No products found
+          </p>
+        ) : (
+          filteredProducts.map((product) => (
+            <div
+              key={product.productId}
+              className="bg-white rounded-xl p-4 border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all transform hover:-translate-y-1"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <div className="bg-purple-100 rounded-lg px-3 py-1">
+                  <span className="text-purple-700 font-bold text-sm">
+                    {product.code}
+                  </span>
                 </div>
-                
-                <div className="relative mb-4">
-                  <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
-                  <input
-                    type="text"
-                    placeholder="🔍 Search products by name or code..."
-                    value={productSearch}
-                    onChange={(e) => setProductSearch(e.target.value)}
-                    className="w-full border-2 border-purple-300 rounded-lg pl-12 pr-4 py-3 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all text-lg"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-96 overflow-y-auto">
-                  {filteredProducts.map(product => (
-                    <div
-                      key={product.productId}
-                      className="bg-white rounded-lg p-4 border-2 border-purple-100 hover:border-purple-300 hover:shadow-md transition-all cursor-pointer"
-                      onClick={() => addToCart(product)}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="bg-purple-100 rounded-lg px-3 py-1">
-                          <span className="text-purple-700 font-bold text-sm">{product.code}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-green-600">
-                            ${product.retailPrice?.toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                      <h3 className="font-semibold text-gray-900 mb-3">{product.name}</h3>
-                      <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-colors flex items-center justify-center gap-2">
-                        <ShoppingCart size={16} />
-                        Add to Sale
-                      </button>
-                    </div>
-                  ))}
+                <div className="text-right">
+                  <div className="text-lg font-bold text-green-600">
+                    ${product.retailPrice?.toFixed(2)}
+                  </div>
                 </div>
               </div>
-            )}
-
+              <h3 className="font-semibold text-gray-900 mb-3">
+                {product.name}
+              </h3>
+              <button
+                onClick={(e) => {
+                  e.preventDefault(); // ✅ prevents any accidental form submit
+                  addToCart(product); // stays open
+                }}
+                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
+              >
+                <ShoppingCart size={16} />
+                Add to Sale
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  </div>
+)}
             {/* Shopping Cart - MOVED UP */}
             <div className="bg-white rounded-xl border-2 border-gray-200 overflow-hidden mb-6">
               <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 flex items-center justify-between">
@@ -552,7 +604,7 @@ const removeFromCart = async (productId, saleDetailId = null) => {
           </div>
         </div>
       </div>
-    </div>
+    
   );
 };
 

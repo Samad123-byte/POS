@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Eye, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { saleService } from '../services/saleService';
-//import { salespersonService } from '../services/salespersonService';
+import { salespersonService } from '../services/salespersonService';
+
 import Pagination from './Pagination';
 
 const Records = ({ onEditSale }) => {
@@ -20,8 +21,10 @@ const Records = ({ onEditSale }) => {
   }, []);
 
   useEffect(() => {
-    fetchSales();
-  }, [currentPage]);
+    if (salespersons.length > 0) {
+      fetchSales();
+    }
+  }, [currentPage, salespersons]);
 
   const fetchSalespersons = async () => {
     try {
@@ -41,7 +44,15 @@ const Records = ({ onEditSale }) => {
     setLoading(true);
     try {
       const response = await saleService.getAll(currentPage, pageSize);
-      setSales(response.data || []);
+      const salesData = response.data || [];
+
+      // Enrich sales with salespersonName
+      const enrichedSales = salesData.map(sale => ({
+        ...sale,
+        salespersonName: getSalespersonName(sale.salespersonId)
+      }));
+
+      setSales(enrichedSales);
       setTotalPages(response.totalPages || 1);
       setTotalRecords(response.totalRecords || 0);
     } catch (error) {
@@ -52,7 +63,10 @@ const Records = ({ onEditSale }) => {
 
   const handleRowDoubleClick = (saleId) => {
     if (onEditSale) {
-      onEditSale(saleId);
+      const selectedSale = sales.find(s => s.saleId === saleId);
+      if (selectedSale) {
+        onEditSale(saleId); // pass entire sale object including salespersonName
+      }
     }
   };
 
@@ -128,7 +142,7 @@ const Records = ({ onEditSale }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {sales.map((sale, index) => (
+                    {sales.map(sale => (
                       <React.Fragment key={sale.saleId}>
                         <tr 
                           className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 cursor-pointer transition-all duration-200"
@@ -142,58 +156,34 @@ const Records = ({ onEditSale }) => {
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm font-medium text-gray-900">
-                              {formatDateTime(sale.saleDate)}
-                            </div>
-                          </td>
+                          <td className="px-6 py-4">{formatDateTime(sale.saleDate)}</td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
                               <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center">
                                 <span className="text-purple-700 font-bold text-sm">
-                              {(sale.salespersonName || "N/A").charAt(0)}
-
+                                  {sale.salespersonName?.charAt(0) || "N/A"}
                                 </span>
                               </div>
                               <span className="font-semibold text-gray-900">
-                          {sale.salespersonName || "N/A"}
-
+                                {sale.salespersonName || "N/A"}
                               </span>
                             </div>
                           </td>
                           <td className="px-6 py-4">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-600">
-                                {truncateText(sale.comments, 30)}
-                              </span>
-                              {sale.comments && sale.comments.length > 30 && (
-                                <button
-                                  onClick={(e) => toggleExpandRow(sale.saleId, e)}
-                                  className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:bg-blue-50 rounded"
-                                  title="View full comment"
-                                >
+                              <span className="text-sm text-gray-600">{truncateText(sale.comments, 30)}</span>
+                              {sale.comments?.length > 30 && (
+                                <button onClick={(e) => toggleExpandRow(sale.saleId, e)} className="text-blue-500 hover:text-blue-700 transition-colors p-1 hover:bg-blue-50 rounded" title="View full comment">
                                   <Eye size={18} />
                                 </button>
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600">
-                              {sale.createdDate ? formatDateTime(sale.createdDate) : formatDateTime(sale.saleDate)}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <div className="text-sm text-gray-600">
-                              {sale.updatedDate ? formatDateTime(sale.updatedDate) : (
-                                <span className="text-gray-400 italic">Not updated</span>
-                              )}
-                            </div>
-                          </td>
+                          <td className="px-6 py-4">{sale.createdDate ? formatDateTime(sale.createdDate) : formatDateTime(sale.saleDate)}</td>
+                          <td className="px-6 py-4">{sale.updatedDate ? formatDateTime(sale.updatedDate) : <span className="text-gray-400 italic">Not updated</span>}</td>
                           <td className="px-6 py-4 text-right">
                             <div className="inline-flex items-center bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg px-4 py-2">
-                              <span className="text-xl font-bold text-green-700">
-                                ${sale.total?.toFixed(2)}
-                              </span>
+                              <span className="text-xl font-bold text-green-700">${sale.total?.toFixed(2)}</span>
                             </div>
                           </td>
                         </tr>
