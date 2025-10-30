@@ -360,7 +360,7 @@ const handleSaveRecord = async () => {
             </div>
           </div>
 
-         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
+        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
   <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -368,25 +368,26 @@ const handleSaveRecord = async () => {
     Salesperson
   </h2>
 
-  {isEditMode && currentSalesperson ? (
-    <div className="text-lg font-semibold text-indigo-700">
-      {currentSalesperson.name} ({currentSalesperson.code})
-    </div>
-  ) : (
-    <select
-      value={selectedSalesperson}
-      onChange={(e) => setSelectedSalesperson(e.target.value)}
-      className="w-full border-2 border-indigo-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-lg font-medium"
-    >
-      <option value="">-- Select Salesperson --</option>
-      {salespersons.map(sp => (
-        <option key={sp.salespersonId} value={sp.salespersonId}>
-          {sp.name} ({sp.code})
-        </option>
-      ))}
-    </select>
+  <select
+    value={selectedSalesperson}
+    onChange={(e) => setSelectedSalesperson(e.target.value)}
+    className="w-full border-2 border-indigo-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-lg font-medium"
+  >
+    <option value="">-- Select Salesperson --</option>
+    {salespersons.map(sp => (
+      <option key={sp.salespersonId} value={sp.salespersonId}>
+        {sp.name} ({sp.code})
+      </option>
+    ))}
+  </select>
+
+  {isEditMode && currentSalesperson && (
+    <p className="text-sm text-gray-500 mt-2">
+      Originally created by: <span className="font-semibold text-indigo-600">{currentSalesperson.name}</span>
+    </p>
   )}
 </div>
+
 
 
            {/* Add Products Button */}
