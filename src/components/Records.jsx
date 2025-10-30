@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Eye, FileText } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { saleService } from '../services/saleService';
-import { salespersonService } from '../services/salespersonService';
+//import { salespersonService } from '../services/salespersonService';
 
 import Pagination from './Pagination';
 
@@ -16,50 +16,35 @@ const Records = ({ onEditSale }) => {
   const [loading, setLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
 
-  useEffect(() => {
-    fetchSalespersons();
-  }, []);
+useEffect(() => {
+  fetchSales();
+}, [currentPage]);
 
-  useEffect(() => {
-    if (salespersons.length > 0) {
-      fetchSales();
-    }
-  }, [currentPage, salespersons]);
 
-  const fetchSalespersons = async () => {
-    try {
-      const response = await salespersonService.getAll(1, 1000);
-      setSalespersons(response.data || []);
-    } catch (error) {
-      console.error('Failed to fetch salespersons:', error);
-    }
-  };
 
-  const getSalespersonName = (salespersonId) => {
-    const salesperson = salespersons.find(sp => sp.salespersonId === salespersonId);
-    return salesperson ? salesperson.name : `ID: ${salespersonId}`;
-  };
 
-  const fetchSales = async () => {
-    setLoading(true);
-    try {
-      const response = await saleService.getAll(currentPage, pageSize);
-      const salesData = response.data || [];
+const fetchSales = async () => {
+  setLoading(true);
+  try {
+    const response = await saleService.getAll(currentPage, pageSize);
+    const salesData = response.data || [];
 
-      // Enrich sales with salespersonName
-      const enrichedSales = salesData.map(sale => ({
-        ...sale,
-        salespersonName: getSalespersonName(sale.salespersonId)
-      }));
+    // Safe mapping (no crash if name missing)
+    const enrichedSales = salesData.map(sale => ({
+      ...sale,
+      salespersonName: sale.salespersonName || "N/A"
+    }));
 
-      setSales(enrichedSales);
-      setTotalPages(response.totalPages || 1);
-      setTotalRecords(response.totalRecords || 0);
-    } catch (error) {
-      Swal.fire('Error', 'Failed to fetch sales records', 'error');
-    }
-    setLoading(false);
-  };
+    setSales(enrichedSales);
+    setTotalPages(response.totalPages || 1);
+    setTotalRecords(response.totalRecords || 0);
+  } catch (error) {
+    console.error("Failed to fetch sales:", error);
+    Swal.fire('Error', 'Failed to fetch sales records', 'error');
+  }
+  setLoading(false);
+};
+
 
   const handleRowDoubleClick = (saleId) => {
     if (onEditSale) {
