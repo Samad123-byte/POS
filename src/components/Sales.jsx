@@ -20,6 +20,12 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [showProductModal, setShowProductModal] = useState(false);
   const [currentSalesperson, setCurrentSalesperson] = useState(null);
 const [saleDate, setSaleDate] = useState(''); // NEW
+const [currentTime, setCurrentTime] = useState(new Date());
+
+useEffect(() => {
+  const timer = setInterval(() => setCurrentTime(new Date()), 1000); // updates every second
+  return () => clearInterval(timer);
+}, []);
 
 useEffect(() => {
   const initializeComponent = async () => {
@@ -72,7 +78,15 @@ const loadSaleForEdit = async (saleId, spList) => {
     setSelectedSalesperson(saleData.salespersonId?.toString() || '');
     setCurrentSalesperson(salespersonObj || null);
     setComments(saleData.comments || '');
-    setSaleDate(saleData.saleDate || ''); // store original sale date
+    //setSaleDate(saleData.saleDate || ''); // store original sale date
+
+    if (saleData.saleDate) {
+  const localDateTime = saleData.saleDate.slice(0, 16); // simple and accurate
+  setSaleDate(localDateTime);
+} else {
+  setSaleDate('');
+}
+
 
     const productsResponse = await productService.getAll(1, 1000);
     const allProducts = productsResponse.data || [];
@@ -237,11 +251,19 @@ const handleSaveRecord = async () => {
 
     if (isEditMode && currentSaleId) {
       // ===== UPDATE SALE =====
+
+ // ✅ Convert datetime-local to ISO string (if provided)
+      const saleDateToSend = saleDate
+  ? `${saleDate}:00` // keep local datetime exactly as chosen
+  : null;
+
+
+
       const saleData = {
         saleId: currentSaleId,
         salespersonId: parseInt(selectedSalesperson),
         total: calculateTotal(),
-        saleDate: saleDate || new Date().toISOString(),
+        saleDate:  saleDateToSend,
         comments: comments || null,
         updatedDate: new Date().toISOString()
       };
@@ -283,9 +305,18 @@ const handleSaveRecord = async () => {
       Swal.fire('Success', 'Sale updated successfully!', 'success');
     } else {
       // ===== CREATE SALE =====
+
+          // ✅ Convert datetime-local to ISO string (if provided)
+      const saleDateToSend = saleDate
+  ? `${saleDate}:00` // keep local time, no timezone shift
+  : null;
+
+
+
       const saleData = {
         salespersonId: parseInt(selectedSalesperson),
         total: calculateTotal(),
+              saleDate: saleDateToSend,
         comments: comments || null
       };
 
@@ -314,6 +345,7 @@ const handleSaveRecord = async () => {
     setCart([]);
     setSelectedSalesperson('');
     setComments('');
+     setSaleDate('');
     setIsEditMode(false);
     setCurrentSaleId(null);
 
@@ -359,6 +391,42 @@ const handleSaveRecord = async () => {
               </h1>
             </div>
           </div>
+
+
+{/*Date and Time*/}
+
+<div className="bg-gradient-to-br from-yellow-50 to-amber-50 rounded-xl p-6 mb-6 border border-amber-200">
+  <h2 className="text-xl font-bold text-amber-900 mb-4 flex items-center gap-2">
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10m-11 8h12a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+    Sale Date & Time
+  </h2>
+
+  <div className="flex flex-col md:flex-row md:items-center gap-4">
+    {/* Manual input */}
+    <input
+      type="datetime-local"
+      value={saleDate}
+      onChange={(e) => setSaleDate(e.target.value)}
+      max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+      className="border-2 border-amber-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all font-medium w-full md:w-1/2"
+    />
+
+    {/* Live clock (only for new sale mode) */}
+    {!isEditMode && (
+      <div className="text-lg text-gray-700 font-semibold bg-white px-4 py-3 rounded-lg border-2 border-gray-200 shadow-sm">
+        <span className="text-amber-600">Live Time:</span>{' '}
+        {currentTime.toLocaleString()}
+      </div>
+    )}
+  </div>
+
+  <p className="text-sm text-gray-500 mt-2">
+    You can pick a past date or leave it blank to use the current time.
+  </p>
+</div>
+
 
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 mb-6 border border-indigo-100">
   <h2 className="text-xl font-bold text-indigo-900 mb-4 flex items-center gap-2">
