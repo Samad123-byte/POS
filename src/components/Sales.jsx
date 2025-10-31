@@ -4,7 +4,9 @@ import Swal from 'sweetalert2';
 import { salespersonService } from '../services/salespersonService';
 import { productService } from '../services/productService';
 import { saleService } from '../services/saleService';
-import { saleDetailService } from '../services/saleDetailService';
+//import { saleDetailService } from '../services/saleDetailService';
+
+
 
 const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [salespersons, setSalespersons] = useState([]);
@@ -21,11 +23,29 @@ const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [currentSalesperson, setCurrentSalesperson] = useState(null);
 const [saleDate, setSaleDate] = useState(''); // NEW
 const [currentTime, setCurrentTime] = useState(new Date());
+const [deletedItems, setDeletedItems] = useState([]);
 
 useEffect(() => {
   const timer = setInterval(() => setCurrentTime(new Date()), 1000); // updates every second
   return () => clearInterval(timer);
 }, []);
+
+
+// 🕒 Auto-fill current live time until user picks
+useEffect(() => {
+  if (!saleDate) {
+    const timer = setInterval(() => {
+      const nowLocal = new Date(
+        new Date().getTime() - new Date().getTimezoneOffset() * 60000
+      )
+        .toISOString()
+        .slice(0, 16);
+      setSaleDate(nowLocal);
+    }, 1000);
+    return () => clearInterval(timer);
+  }
+}, [saleDate]);
+
 
 useEffect(() => {
   const initializeComponent = async () => {
@@ -91,20 +111,21 @@ const loadSaleForEdit = async (saleId, spList) => {
     const productsResponse = await productService.getAll(1, 1000);
     const allProducts = productsResponse.data || [];
 
-    const cartItems = Array.isArray(saleData.details)
-      ? saleData.details.map(detail => {
-          const product = allProducts.find(p => p.productId === detail.productId);
-          return {
-            saleDetailId: detail.saleDetailId,
-            productId: detail.productId,
-            name: product?.name || `Product ${detail.productId}`,
-            code: product?.code || '',
-            retailPrice: detail.retailPrice || 0,
-            quantity: detail.quantity || 1,
-            discount: detail.discount || 0
-          };
-        })
-      : [];
+ const cartItems = Array.isArray(saleData.saleDetails)
+  ? saleData.saleDetails.map(detail => {
+      const product = allProducts.find(p => p.productId === detail.productId);
+      return {
+        saleDetailId: detail.saleDetailId,
+        productId: detail.productId,
+        name: product?.name || `Product ${detail.productId}`,
+        code: product?.code || '',
+        retailPrice: detail.retailPrice || 0,
+        quantity: detail.quantity || 1,
+        discount: detail.discount || 0
+      };
+    })
+  : [];
+
 
     setCart(cartItems);
 
@@ -174,54 +195,103 @@ const openProductModal = async () => {
 
  // ✅ FIXED: removeFromCart function in Sales.jsx
 // Replace your existing removeFromCart function with this:
-
+/*
 const removeFromCart = async (productId, saleDetailId = null) => {
-  if (isEditMode && saleDetailId) {
-    const result = await Swal.fire({
-      title: 'Delete this item?',
-      text: "This will remove the item from the sale",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Yes, delete it!'
-    });
+  // Step 1: Ask user confirmation
+  const result = await Swal.fire({
+    title: 'Delete this item?',
+    text: "This will remove the item from the sale",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  });
 
-    if (result.isConfirmed) {
-      try {
+  // Step 2: If user confirms
+  if (result.isConfirmed) {
+    try {
+      // Step 3: Only call backend if editing and saleDetailId exists
+      if (isEditMode && saleDetailId) {
         const response = await saleDetailService.delete(saleDetailId);
-        
-        // ✅ Check if deletion was successful
-        if (response.success) {
-          setCart(cart.filter(item => item.productId !== productId));
-          Swal.fire('Deleted!', response.message || 'Item removed successfully', 'success');
-        } else {
-          // ✅ Show backend error message
+
+        if (!response.success) {
+          // Show backend error message if deletion fails
           Swal.fire({
             title: 'Cannot Delete',
             text: response.message || 'Failed to delete item',
             icon: 'error',
             confirmButtonText: 'OK'
           });
+          return; // stop further execution
         }
-      } catch (error) {
-        // ✅ Show detailed error message from backend
-        const errorMessage = error.response?.data?.message || 
-                           error.response?.data?.Message || 
-                           error.message || 
-                           'Failed to delete item';
-        
-        Swal.fire({
-          title: 'Error',
-          text: errorMessage,
-          icon: 'error',
-          confirmButtonText: 'OK'
-        });
       }
+
+      // Step 4: Remove item locally from cart
+      setCart(cart.filter(item => item.productId !== productId));
+
+      // Step 5: Optional success message
+      Swal.fire('Deleted!', 'Item removed from the sale.', 'success');
+
+    } catch (error) {
+      // Step 6: Handle any unexpected errors
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.Message ||
+        error.message ||
+        'Failed to delete item';
+
+      Swal.fire({
+        title: 'Error',
+        text: errorMessage,
+        icon: 'error',
+        confirmButtonText: 'OK'
+      });
     }
-  } else {
-    // Not in edit mode, just remove from cart
+  }
+};
+
+*/
+
+const removeFromCart = async (productId) => {
+  // If sale is not saved yet, just remove locally
+  if (!currentSaleId) {
     setCart(cart.filter(item => item.productId !== productId));
+    return;
+  }
+
+  // Confirm deletion
+  const result = await Swal.fire({
+    title: 'Delete this item?',
+    text: "This will remove the item from the sale",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, delete it!'
+  });
+
+  if (!result.isConfirmed) return;
+
+  try {
+    setLoading(true);
+
+    // Call backend to remove item
+    const response = await saleService.deleteItem(currentSaleId, productId);
+
+    if (!response.success) {
+      Swal.fire('Error', response.message || 'Failed to delete item', 'error');
+      return;
+    }
+
+    // Remove item locally after successful deletion
+    setCart(cart.filter(item => item.productId !== productId));
+
+    Swal.fire('Deleted!', 'Item removed from sale.', 'success');
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to delete item', 'error');
+  } finally {
+    setLoading(false);
   }
 };
 
@@ -230,6 +300,8 @@ const removeFromCart = async (productId, saleDetailId = null) => {
     const discount = subtotal * (item.discount / 100);
     return subtotal - discount;
   };
+
+
 
   const calculateTotal = () => {
     return cart.reduce((total, item) => total + calculateItemTotal(item), 0);
@@ -240,6 +312,7 @@ const handleSaveRecord = async () => {
     Swal.fire('Warning', 'Please select a salesperson', 'warning');
     return;
   }
+
   if (cart.length === 0) {
     Swal.fire('Warning', 'Please add products to cart', 'warning');
     return;
@@ -247,111 +320,45 @@ const handleSaveRecord = async () => {
 
   setLoading(true);
   try {
-    const utcNow = new Date().toISOString();
+    const saleData = {
+      salespersonId: parseInt(selectedSalesperson),
+      total: calculateTotal(),
+  saleDate: saleDate
+  ? new Date(
+      new Date(saleDate).getTime() - new Date().getTimezoneOffset() * 60000
+    ).toISOString()
+  : null,
 
-    if (isEditMode && currentSaleId) {
-      // ===== UPDATE SALE =====
-
- // ✅ Convert datetime-local to ISO string (if provided)
-      const saleDateToSend = saleDate
-  ? `${saleDate}:00` // keep local datetime exactly as chosen
-  : null;
-
-
-
-      const saleData = {
-        saleId: currentSaleId,
-        salespersonId: parseInt(selectedSalesperson),
-        total: calculateTotal(),
-        saleDate:  saleDateToSend,
-        comments: comments || null,
-        updatedDate: new Date().toISOString()
-      };
-
-      // Update the sale itself
-      await saleService.update(currentSaleId, saleData);
-
-      // Split cart into existing and new items
-      const existingItems = cart.filter(item => item.saleDetailId);
-      const newItems = cart.filter(item => !item.saleDetailId);
-
-      // Batch update existing items
-      if (existingItems.length > 0) {
-        await saleDetailService.batchUpdate(
-          existingItems.map(item => ({
-            saleDetailId: item.saleDetailId,
-            saleId: currentSaleId,
-            productId: item.productId,
-            retailPrice: item.retailPrice,
-            quantity: item.quantity,
-            discount: item.discount || 0
-          }))
-        );
-      }
-
-      // Batch create new items
-      if (newItems.length > 0) {
-        await saleDetailService.createBatch(
-          newItems.map(item => ({
-            saleId: currentSaleId,
-            productId: item.productId,
-            retailPrice: item.retailPrice,
-            quantity: item.quantity,
-            discount: item.discount || 0
-          }))
-        );
-      }
-
-      Swal.fire('Success', 'Sale updated successfully!', 'success');
-    } else {
-      // ===== CREATE SALE =====
-
-          // ✅ Convert datetime-local to ISO string (if provided)
-      const saleDateToSend = saleDate
-  ? `${saleDate}:00` // keep local time, no timezone shift
-  : null;
-
-
-
-      const saleData = {
-        salespersonId: parseInt(selectedSalesperson),
-        total: calculateTotal(),
-              saleDate: saleDateToSend,
-        comments: comments || null
-      };
-
-      const saleResponse = await saleService.create(saleData);
-      const saleDataFromServer = saleResponse.data;
-
-      if (!saleDataFromServer || !saleDataFromServer.saleId) {
-        throw new Error('Failed to create sale. SaleId not returned.');
-      }
-
-      // Batch create all sale details
-      const saleDetails = cart.map(item => ({
-        saleId: saleDataFromServer.saleId,
+      comments: comments || null,
+      saleDetails: cart.map(item => ({
         productId: item.productId,
         retailPrice: item.retailPrice,
         quantity: item.quantity,
         discount: item.discount || 0
-      }));
+      }))
+    };
 
-      await saleDetailService.createBatch(saleDetails);
 
+
+    if (isEditMode && currentSaleId) {
+      saleData.saleId = currentSaleId;
+      saleData.updatedDate = new Date().toISOString();
+      await saleService.update(currentSaleId, saleData);
+      Swal.fire('Success', 'Sale updated successfully!', 'success');
+    } else {
+      await saleService.create(saleData);
       Swal.fire('Success', 'Sale created successfully!', 'success');
     }
 
-    // ===== RESET STATES =====
+    // Reset states
     setCart([]);
     setSelectedSalesperson('');
     setComments('');
-     setSaleDate('');
+    setSaleDate('');
     setIsEditMode(false);
     setCurrentSaleId(null);
 
-    if (onBackToRecords) {
-      onBackToRecords();
-    }
+    if (onBackToRecords) onBackToRecords();
   } catch (error) {
     console.error('Save error:', error);
     Swal.fire('Error', error.response?.data?.message || error.message, 'error');
@@ -359,6 +366,7 @@ const handleSaveRecord = async () => {
 
   setLoading(false);
 };
+
 
 
   const filteredProducts = products.filter(product =>
@@ -404,26 +412,19 @@ const handleSaveRecord = async () => {
   </h2>
 
   <div className="flex flex-col md:flex-row md:items-center gap-4">
-    {/* Manual input */}
     <input
       type="datetime-local"
       value={saleDate}
       onChange={(e) => setSaleDate(e.target.value)}
-      max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)}
+      max={new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16)}
       className="border-2 border-amber-300 rounded-lg px-4 py-3 text-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 transition-all font-medium w-full md:w-1/2"
     />
-
-    {/* Live clock (only for new sale mode) */}
-    {!isEditMode && (
-      <div className="text-lg text-gray-700 font-semibold bg-white px-4 py-3 rounded-lg border-2 border-gray-200 shadow-sm">
-        <span className="text-amber-600">Live Time:</span>{' '}
-        {currentTime.toLocaleString()}
-      </div>
-    )}
   </div>
 
   <p className="text-sm text-gray-500 mt-2">
-    You can pick a past date or leave it blank to use the current time.
+    You can pick a past date or leave it blank to use the current live time.
   </p>
 </div>
 
@@ -641,7 +642,7 @@ const handleSaveRecord = async () => {
                           </td>
                           <td className="px-6 py-4 text-center">
                             <button
-                              onClick={() => removeFromCart(item.productId, item.saleDetailId)}
+                              onClick={() => removeFromCart(item.productId)}
                               className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors font-semibold flex items-center gap-2 mx-auto"
                             >
                               <Trash2 size={18} />
