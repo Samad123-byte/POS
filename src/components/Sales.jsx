@@ -25,6 +25,19 @@ const [saleDate, setSaleDate] = useState(''); // NEW
 const [currentTime, setCurrentTime] = useState(new Date());
 const [deletedItems, setDeletedItems] = useState([]);
 
+
+// ✅ Close product modal on Esc key
+useEffect(() => {
+  const handleEsc = (e) => {
+    if (e.key === "Escape" && showProductModal) {
+      setShowProductModal(false);
+    }
+  };
+  window.addEventListener("keydown", handleEsc);
+  return () => window.removeEventListener("keydown", handleEsc);
+}, [showProductModal]);
+
+
 useEffect(() => {
   const timer = setInterval(() => setCurrentTime(new Date()), 1000); // updates every second
   return () => clearInterval(timer);
@@ -98,37 +111,35 @@ const loadSaleForEdit = async (saleId, spList) => {
     setSelectedSalesperson(saleData.salespersonId?.toString() || '');
     setCurrentSalesperson(salespersonObj || null);
     setComments(saleData.comments || '');
-    //setSaleDate(saleData.saleDate || ''); // store original sale date
 
+    // Keep original sale date format
     if (saleData.saleDate) {
-  const localDateTime = saleData.saleDate.slice(0, 16); // simple and accurate
-  setSaleDate(localDateTime);
-} else {
-  setSaleDate('');
-}
+      const localDateTime = saleData.saleDate.slice(0, 16);
+      setSaleDate(localDateTime);
+    } else {
+      setSaleDate('');
+    }
+
+    // ✅ Reuse already loaded products to avoid extra API hit
+ const allProducts = products;
 
 
-    const productsResponse = await productService.getAll(1, 1000);
-    const allProducts = productsResponse.data || [];
-
- const cartItems = Array.isArray(saleData.saleDetails)
-  ? saleData.saleDetails.map(detail => {
-      const product = allProducts.find(p => p.productId === detail.productId);
-      return {
-        saleDetailId: detail.saleDetailId,
-        productId: detail.productId,
-        name: product?.name || `Product ${detail.productId}`,
-        code: product?.code || '',
-        retailPrice: detail.retailPrice || 0,
-        quantity: detail.quantity || 1,
-        discount: detail.discount || 0
-      };
-    })
-  : [];
-
+    const cartItems = Array.isArray(saleData.saleDetails)
+      ? saleData.saleDetails.map(detail => {
+          const product = allProducts.find(p => p.productId === detail.productId);
+          return {
+            saleDetailId: detail.saleDetailId,
+            productId: detail.productId,
+            name: product?.name || `Product ${detail.productId}`,
+            code: product?.code || '',
+            retailPrice: detail.retailPrice || 0,
+            quantity: detail.quantity || 1,
+            discount: detail.discount || 0,
+          };
+        })
+      : [];
 
     setCart(cartItems);
-
   } catch (error) {
     console.error('Error loading sale:', error);
     Swal.fire('Error', error.message, 'error');
@@ -137,6 +148,7 @@ const loadSaleForEdit = async (saleId, spList) => {
     setLoading(false);
   }
 };
+
 
 
 const openProductModal = async () => {
