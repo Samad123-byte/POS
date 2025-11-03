@@ -22,6 +22,35 @@ useEffect(() => {
 
 
 
+const handleDeleteSale = async (saleId) => {
+  const confirmResult = await Swal.fire({
+    title: `Delete Sale #${saleId}?`,
+    text: "This action cannot be undone.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Yes, delete it!'
+  });
+
+  if (confirmResult.isConfirmed) {
+    try {
+      const response = await saleService.delete(saleId);
+      // Show backend message
+      Swal.fire('Deleted!', response.message || 'Sale has been deleted.', 'success');
+
+      // Refresh sales list
+      fetchSales();
+    } catch (error) {
+      console.error('Delete failed:', error);
+      const message = error.response?.data?.message || 'Failed to delete sale';
+      Swal.fire('Error', message, 'error');
+    }
+  }
+};
+
+
+
 
 const fetchSales = async () => {
   setLoading(true);
@@ -124,7 +153,17 @@ const fetchSales = async () => {
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Created</th>
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Updated</th>
                       <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Total Amount</th>
+                    
+ 
+
+                      <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Actions</th>
+
+             
+
+
                     </tr>
+
+
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {sales.map(sale => (
@@ -171,7 +210,23 @@ const fetchSales = async () => {
                               <span className="text-xl font-bold text-green-700">${sale.total?.toFixed(2)}</span>
                             </div>
                           </td>
+
+
+
+<td className="px-6 py-4 text-right flex justify-end gap-2">
+  <button
+    onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.saleId); }}
+    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm"
+  >
+    Delete
+  </button>
+</td>
+
+
                         </tr>
+
+
+
                         {expandedRow === sale.saleId && sale.comments && (
                           <tr className="bg-gradient-to-r from-blue-50 to-indigo-50">
                             <td colSpan="7" className="px-6 py-4">
@@ -200,6 +255,7 @@ const fetchSales = async () => {
                         </td>
                       </tr>
                     )}
+
                   </tbody>
                 </table>
               </div>
