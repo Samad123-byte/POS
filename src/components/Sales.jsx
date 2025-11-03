@@ -135,6 +135,7 @@ const loadSaleForEdit = async (saleId, spList) => {
             retailPrice: detail.retailPrice || 0,
             quantity: detail.quantity || 1,
             discount: detail.discount || 0,
+            rowState: 'Unchanged'
           };
         })
       : [];
@@ -182,7 +183,9 @@ const openProductModal = async () => {
     if (existingItem) {
       setCart(cart.map(item =>
         item.productId === product.productId
-          ? { ...item, quantity: item.quantity + 1 }
+          ? { ...item, quantity: item.quantity + 1, 
+             rowState: item.rowState === 'Unchanged' ? 'Modified' : item.rowState // mark modified if already existed
+           }
           : item
       ));
     } else {
@@ -192,18 +195,29 @@ const openProductModal = async () => {
         code: product.code,
         retailPrice: product.retailPrice || 0,
         quantity: 1,
-        discount: 0
+        discount: 0,
+           rowState: 'Added' 
       }]);
     }
     setProductSearch('');
    // setShowProductModal(false);
   };
 
-  const updateCartItem = (productId, field, value) => {
-    setCart(cart.map(item =>
-      item.productId === productId ? { ...item, [field]: parseFloat(value) || 0 } : item
-    ));
-  };
+const updateCartItem = (productId, field, value) => {
+  setCart(cart.map(item => {
+    if (item.productId === productId) {
+      const updatedItem = { ...item, [field]: parseFloat(value) || 0 };
+
+      // ✅ Mark as Modified if it was previously Unchanged
+      if (item.rowState === 'Unchanged') {
+        updatedItem.rowState = 'Modified';
+      }
+
+      return updatedItem;
+    }
+    return item;
+  }));
+};
 
  // ✅ FIXED: removeFromCart function in Sales.jsx
 // Replace your existing removeFromCart function with this:
@@ -266,9 +280,13 @@ const removeFromCart = async (productId, saleDetailId = null) => {
 */
 
 const removeFromCart = async (productId) => {
-  // If sale is not saved yet, just remove locally
-  if (!currentSaleId) {
-    setCart(cart.filter(item => item.productId !== productId));
+  const item = cart.find(i => i.productId === productId);
+
+  if (!item) return;
+
+  // If sale is not saved yet or item is newly added, just remove locally
+  if (!currentSaleId || item.rowState === 'Added') {
+    setCart(cart.filter(i => i.productId !== productId));
     return;
   }
 
@@ -296,8 +314,11 @@ const removeFromCart = async (productId) => {
       return;
     }
 
-    // Remove item locally after successful deletion
-    setCart(cart.filter(item => item.productId !== productId));
+    // ✅ Mark rowState as 'Deleted' instead of fully removing (optional)
+ setCart(cart.map(i => 
+  i.productId === productId ? { ...i, rowState: 'Deleted' } : i
+));
+ // you can keep deleted in cart if you want backend batch delete
 
     Swal.fire('Deleted!', 'Item removed from sale.', 'success');
   } catch (error) {
@@ -316,7 +337,9 @@ const removeFromCart = async (productId) => {
 
 
   const calculateTotal = () => {
-    return cart.reduce((total, item) => total + calculateItemTotal(item), 0);
+    return cart
+     .filter(item => item.rowState !== 'Deleted')
+    .reduce((total, item) => total + calculateItemTotal(item), 0);
   };
 
 const handleSaveRecord = async () => {
@@ -325,7 +348,7 @@ const handleSaveRecord = async () => {
     return;
   }
 
-  if (cart.length === 0) {
+  if (cart.filter(item => item.rowState !== 'Deleted').length === 0) {
     Swal.fire('Warning', 'Please add products to cart', 'warning');
     return;
   }
@@ -335,48 +358,62 @@ const handleSaveRecord = async () => {
     const saleData = {
       salespersonId: parseInt(selectedSalesperson),
       total: calculateTotal(),
-  saleDate: saleDate
-  ? new Date(
-      new Date(saleDate).getTime() - new Date().getTimezoneOffset() * 60000
-    ).toISOString()
-  : null,
-
+      saleDate: saleDate
+        ? new Date(new Date(saleDate).getTime() - new Date().getTimezoneOffset() * 60000).toISOString()
+        : null,
       comments: comments || null,
       saleDetails: cart.map(item => ({
+      saleDetailId: item.rowState === 'Added' ? null : item.saleDetailId, 
         productId: item.productId,
         retailPrice: item.retailPrice,
         quantity: item.quantity,
-        discount: item.discount || 0
+        discount: item.discount || 0,
+        rowState: item.rowState // ✅ Added, Modified, Deleted, Unchanged
       }))
     };
-
-
 
     if (isEditMode && currentSaleId) {
       saleData.saleId = currentSaleId;
       saleData.updatedDate = new Date().toISOString();
-      await saleService.update(currentSaleId, saleData);
-      Swal.fire('Success', 'Sale updated successfully!', 'success');
+
+      const response = await saleService.update(currentSaleId, saleData);
+
+      if (response.success) {
+        Swal.fire('Success', 'Sale updated successfully!', 'success');
+
+        // Remove deleted items from cart locally
+        setCart(cart.filter(item => item.rowState !== 'Deleted'));
+
+        setIsEditMode(false);
+        setCurrentSaleId(null);
+        setSelectedSalesperson('');
+        setComments('');
+        setSaleDate('');
+        if (onBackToRecords) onBackToRecords();
+      } else {
+        Swal.fire('Error', response.message || 'Failed to update sale', 'error');
+      }
+
     } else {
-      await saleService.create(saleData);
-      Swal.fire('Success', 'Sale created successfully!', 'success');
+      const response = await saleService.create(saleData);
+      if (response.success) {
+        Swal.fire('Success', 'Sale created successfully!', 'success');
+
+        setCart([]);
+        setSelectedSalesperson('');
+        setComments('');
+        setSaleDate('');
+        if (onBackToRecords) onBackToRecords();
+      } else {
+        Swal.fire('Error', response.message || 'Failed to create sale', 'error');
+      }
     }
-
-    // Reset states
-    setCart([]);
-    setSelectedSalesperson('');
-    setComments('');
-    setSaleDate('');
-    setIsEditMode(false);
-    setCurrentSaleId(null);
-
-    if (onBackToRecords) onBackToRecords();
   } catch (error) {
     console.error('Save error:', error);
-    Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+    Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to save sale', 'error');
+  } finally {
+    setLoading(false);
   }
-
-  setLoading(false);
 };
 
 
@@ -620,7 +657,9 @@ const handleSaveRecord = async () => {
                         </td>
                       </tr>
                     ) : (
-                      cart.filter(item => 
+                      cart
+                       .filter(item => item.rowState !== 'Deleted') 
+                      .filter(item => 
                         item.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                         item.code?.toLowerCase().includes(searchTerm.toLowerCase())
                       ).map((item, index) => (
