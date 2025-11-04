@@ -4,9 +4,6 @@ import Swal from 'sweetalert2';
 import { salespersonService } from '../services/salespersonService';
 import { productService } from '../services/productService';
 import { saleService } from '../services/saleService';
-//import { saleDetailService } from '../services/saleDetailService';
-
-
 
 const Sales = ({ editingSaleId = null, onBackToRecords = null }) => {
   const [salespersons, setSalespersons] = useState([]);
@@ -219,76 +216,10 @@ const updateCartItem = (productId, field, value) => {
   }));
 };
 
- // ✅ FIXED: removeFromCart function in Sales.jsx
-// Replace your existing removeFromCart function with this:
-/*
-const removeFromCart = async (productId, saleDetailId = null) => {
-  // Step 1: Ask user confirmation
-  const result = await Swal.fire({
-    title: 'Delete this item?',
-    text: "This will remove the item from the sale",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
-  });
-
-  // Step 2: If user confirms
-  if (result.isConfirmed) {
-    try {
-      // Step 3: Only call backend if editing and saleDetailId exists
-      if (isEditMode && saleDetailId) {
-        const response = await saleDetailService.delete(saleDetailId);
-
-        if (!response.success) {
-          // Show backend error message if deletion fails
-          Swal.fire({
-            title: 'Cannot Delete',
-            text: response.message || 'Failed to delete item',
-            icon: 'error',
-            confirmButtonText: 'OK'
-          });
-          return; // stop further execution
-        }
-      }
-
-      // Step 4: Remove item locally from cart
-      setCart(cart.filter(item => item.productId !== productId));
-
-      // Step 5: Optional success message
-      Swal.fire('Deleted!', 'Item removed from the sale.', 'success');
-
-    } catch (error) {
-      // Step 6: Handle any unexpected errors
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.Message ||
-        error.message ||
-        'Failed to delete item';
-
-      Swal.fire({
-        title: 'Error',
-        text: errorMessage,
-        icon: 'error',
-        confirmButtonText: 'OK'
-      });
-    }
-  }
-};
-
-*/
 
 const removeFromCart = async (productId) => {
   const item = cart.find(i => i.productId === productId);
-
   if (!item) return;
-
-  // If sale is not saved yet or item is newly added, just remove locally
-  if (!currentSaleId || item.rowState === 'Added') {
-    setCart(cart.filter(i => i.productId !== productId));
-    return;
-  }
 
   // Confirm deletion
   const result = await Swal.fire({
@@ -303,30 +234,52 @@ const removeFromCart = async (productId) => {
 
   if (!result.isConfirmed) return;
 
-  try {
-    setLoading(true);
-
-    // Call backend to remove item
-    const response = await saleService.deleteItem(currentSaleId, productId);
-
-    if (!response.success) {
-      Swal.fire('Error', response.message || 'Failed to delete item', 'error');
-      return;
-    }
-
-    // ✅ Mark rowState as 'Deleted' instead of fully removing (optional)
- setCart(cart.map(i => 
-  i.productId === productId ? { ...i, rowState: 'Deleted' } : i
-));
- // you can keep deleted in cart if you want backend batch delete
-
+  if (!currentSaleId) {
+    // Item not yet saved in DB, just remove locally
+    setCart(prev => prev.filter(i => i.productId !== productId));
     Swal.fire('Deleted!', 'Item removed from sale.', 'success');
+    return;
+  }
+
+  try {
+    // Mark the item as Deleted locally
+    const updatedCart = cart.map(i =>
+      i.productId === productId ? { ...i, rowState: 'Deleted' } : i
+    );
+    setCart(updatedCart);
+
+    // Prepare payload: include only existing saleDetailId items
+    const payload = {
+      saleId: currentSaleId,
+      saleDetails: updatedCart
+        .filter(i => i.rowState === 'Deleted') // only deleted items
+        .map(i => ({
+          saleDetailId: i.saleDetailId || null, // null if new
+          productId: i.productId,
+          retailPrice: i.retailPrice,
+          quantity: i.quantity,
+          discount: i.discount,
+          rowState: 'Deleted'
+        }))
+    };
+
+    // Call update API
+    const response = await saleService.update(currentSaleId, payload);
+
+    if (response.success) {
+      // Remove from local cart
+      setCart(prev => prev.filter(i => i.productId !== productId));
+      Swal.fire('Deleted!', 'Item removed from sale.', 'success');
+    } else {
+      Swal.fire('Error', response.message || 'Failed to delete item', 'error');
+    }
   } catch (error) {
+    console.error('Delete error:', error);
     Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to delete item', 'error');
-  } finally {
-    setLoading(false);
   }
 };
+
+
 
   const calculateItemTotal = (item) => {
     const subtotal = item.retailPrice * item.quantity;

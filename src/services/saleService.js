@@ -27,13 +27,6 @@ export const saleService = {
     const res = await apiClient.delete(`/Sales/${id}`);
     return res.data;
   },
-  // Add this to saleService
-deleteItem: async (saleId, productId) => {
-  const res = await apiClient.post('/Sales/DeleteItem', {
-    SaleId: saleId,
-    SaleDetails: [{ ProductId: productId }]
-  });
-  return res.data;
-}
+ 
 
 };
