@@ -74,7 +74,7 @@ setProducts(productList);
 
 // ✅ If editing, load sale details
 if (editingSaleId) {
-  await loadSaleForEdit(editingSaleId, spList);
+  await loadSaleForEdit(editingSaleId, spList,  productList);
 }
     } catch (error) {
       console.error('Error initializing component:', error);
@@ -88,7 +88,7 @@ if (editingSaleId) {
 }, [editingSaleId]);
 
 
-const loadSaleForEdit = async (saleId, spList) => {
+const loadSaleForEdit = async (saleId, spList, productList) => {
   setLoading(true);
   try {
     // Fetch sale + details in one API call
@@ -117,9 +117,8 @@ const loadSaleForEdit = async (saleId, spList) => {
       setSaleDate('');
     }
 
-    // ✅ Reuse already loaded products to avoid extra API hit
- const allProducts = products;
-
+    // ✅ Use the passed productList instead of products state
+    const allProducts = productList;
 
     const cartItems = Array.isArray(saleData.saleDetails)
       ? saleData.saleDetails.map(detail => {
@@ -146,6 +145,7 @@ const loadSaleForEdit = async (saleId, spList) => {
     setLoading(false);
   }
 };
+
 
 
 
