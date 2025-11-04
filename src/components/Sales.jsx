@@ -221,7 +221,6 @@ const removeFromCart = async (productId) => {
   const item = cart.find(i => i.productId === productId);
   if (!item) return;
 
-  // Confirm deletion
   const result = await Swal.fire({
     title: 'Delete this item?',
     text: "This will remove the item from the sale",
@@ -234,41 +233,41 @@ const removeFromCart = async (productId) => {
 
   if (!result.isConfirmed) return;
 
-  if (!currentSaleId) {
-    // Item not yet saved in DB, just remove locally
+  if (!currentSaleId || item.rowState === 'Added') {
+    // New item, not in DB yet → just remove locally
     setCart(prev => prev.filter(i => i.productId !== productId));
     Swal.fire('Deleted!', 'Item removed from sale.', 'success');
     return;
   }
 
+  // Existing item → mark as Deleted
+  const updatedCart = cart.map(i =>
+    i.productId === productId ? { ...i, rowState: 'Deleted' } : i
+  );
+  setCart(updatedCart);
+
+  // Prepare full sale payload for update
+  const payload = {
+    saleId: currentSaleId,
+    salespersonId: parseInt(selectedSalesperson),
+    comments,
+    saleDate,
+    saleDetails: updatedCart.map(i => ({
+      saleDetailId: i.saleDetailId,
+      productId: i.productId,
+      retailPrice: i.retailPrice,
+      quantity: i.quantity,
+      discount: i.discount,
+      rowState: i.rowState
+    }))
+  };
+
   try {
-    // Mark the item as Deleted locally
-    const updatedCart = cart.map(i =>
-      i.productId === productId ? { ...i, rowState: 'Deleted' } : i
-    );
-    setCart(updatedCart);
-
-    // Prepare payload: include only existing saleDetailId items
-    const payload = {
-      saleId: currentSaleId,
-      saleDetails: updatedCart
-        .filter(i => i.rowState === 'Deleted') // only deleted items
-        .map(i => ({
-          saleDetailId: i.saleDetailId || null, // null if new
-          productId: i.productId,
-          retailPrice: i.retailPrice,
-          quantity: i.quantity,
-          discount: i.discount,
-          rowState: 'Deleted'
-        }))
-    };
-
-    // Call update API
     const response = await saleService.update(currentSaleId, payload);
 
     if (response.success) {
-      // Remove from local cart
-      setCart(prev => prev.filter(i => i.productId !== productId));
+      // Remove deleted items locally after backend confirms
+      setCart(prev => prev.filter(i => i.rowState !== 'Deleted'));
       Swal.fire('Deleted!', 'Item removed from sale.', 'success');
     } else {
       Swal.fire('Error', response.message || 'Failed to delete item', 'error');
@@ -278,6 +277,7 @@ const removeFromCart = async (productId) => {
     Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to delete item', 'error');
   }
 };
+
 
 
 
