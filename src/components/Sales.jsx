@@ -217,66 +217,32 @@ const updateCartItem = (productId, field, value) => {
 };
 
 
-const removeFromCart = async (productId) => {
+const removeFromCart = (productId) => {
   const item = cart.find(i => i.productId === productId);
   if (!item) return;
 
-  const result = await Swal.fire({
+  Swal.fire({
     title: 'Delete this item?',
-    text: "This will remove the item from the sale",
+    text: "This will mark the item for removal from the sale",
     icon: 'warning',
     showCancelButton: true,
     confirmButtonColor: '#3085d6',
     cancelButtonColor: '#d33',
     confirmButtonText: 'Yes, delete it!'
-  });
-
-  if (!result.isConfirmed) return;
-
-  if (!currentSaleId || item.rowState === 'Added') {
-    // New item, not in DB yet → just remove locally
-    setCart(prev => prev.filter(i => i.productId !== productId));
-    Swal.fire('Deleted!', 'Item removed from sale.', 'success');
-    return;
-  }
-
-  // Existing item → mark as Deleted
-  const updatedCart = cart.map(i =>
-    i.productId === productId ? { ...i, rowState: 'Deleted' } : i
-  );
-  setCart(updatedCart);
-
-  // Prepare full sale payload for update
-  const payload = {
-    saleId: currentSaleId,
-    salespersonId: parseInt(selectedSalesperson),
-    comments,
-    saleDate,
-    saleDetails: updatedCart.map(i => ({
-      saleDetailId: i.saleDetailId,
-      productId: i.productId,
-      retailPrice: i.retailPrice,
-      quantity: i.quantity,
-      discount: i.discount,
-      rowState: i.rowState
-    }))
-  };
-
-  try {
-    const response = await saleService.update(currentSaleId, payload);
-
-    if (response.success) {
-      // Remove deleted items locally after backend confirms
-      setCart(prev => prev.filter(i => i.rowState !== 'Deleted'));
-      Swal.fire('Deleted!', 'Item removed from sale.', 'success');
-    } else {
-      Swal.fire('Error', response.message || 'Failed to delete item', 'error');
+  }).then((result) => {
+    if (result.isConfirmed) {
+      setCart(prev =>
+        prev.map(i =>
+          i.productId === productId
+            ? { ...i, rowState: 'Deleted' } // ✅ mark deleted
+            : i
+        )
+      );
+      Swal.fire('Deleted!', 'Item marked for removal.', 'success');
     }
-  } catch (error) {
-    console.error('Delete error:', error);
-    Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to delete item', 'error');
-  }
+  });
 };
+
 
 
 
@@ -316,12 +282,12 @@ const handleSaveRecord = async () => {
         : null,
       comments: comments || null,
       saleDetails: cart.map(item => ({
-      saleDetailId: item.rowState === 'Added' ? null : item.saleDetailId, 
+        saleDetailId: item.rowState === 'Added' ? null : item.saleDetailId,
         productId: item.productId,
         retailPrice: item.retailPrice,
         quantity: item.quantity,
         discount: item.discount || 0,
-        rowState: item.rowState // ✅ Added, Modified, Deleted, Unchanged
+        rowState: item.rowState // Added / Modified / Deleted / Unchanged
       }))
     };
 
@@ -334,7 +300,7 @@ const handleSaveRecord = async () => {
       if (response.success) {
         Swal.fire('Success', 'Sale updated successfully!', 'success');
 
-        // Remove deleted items from cart locally
+        // ✅ Remove deleted items locally after backend update
         setCart(cart.filter(item => item.rowState !== 'Deleted'));
 
         setIsEditMode(false);
@@ -346,12 +312,10 @@ const handleSaveRecord = async () => {
       } else {
         Swal.fire('Error', response.message || 'Failed to update sale', 'error');
       }
-
     } else {
       const response = await saleService.create(saleData);
       if (response.success) {
         Swal.fire('Success', 'Sale created successfully!', 'success');
-
         setCart([]);
         setSelectedSalesperson('');
         setComments('');
@@ -368,6 +332,7 @@ const handleSaveRecord = async () => {
     setLoading(false);
   }
 };
+
 
 
 
