@@ -251,29 +251,13 @@ const updateCartItem = (productId, field, value) => {
 
 
 const removeFromCart = (productId) => {
-  const item = cart.find(i => i.productId === productId);
-  if (!item) return;
-
-  Swal.fire({
-    title: 'Delete this item?',
-    text: "This will mark the item for removal from the sale",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#3085d6',
-    cancelButtonColor: '#d33',
-    confirmButtonText: 'Yes, delete it!'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      setCart(prev =>
-        prev.map(i =>
-          i.productId === productId
-            ? { ...i, rowState: 'Deleted' } // ✅ mark deleted
-            : i
-        )
-      );
-      Swal.fire('Deleted!', 'Item marked for removal.', 'success');
-    }
-  });
+  setCart(prev =>
+    prev.map(i =>
+      i.productId === productId
+        ? { ...i, rowState: 'Deleted' } // ✅ instantly mark as deleted
+        : i
+    )
+  );
 };
 
 
