@@ -91,7 +91,6 @@ if (editingSaleId) {
 const loadSaleForEdit = async (saleId, spList, productList) => {
   setLoading(true);
   try {
-    // Fetch sale + details in one API call
     const saleResponse = await saleService.getWithDetails(saleId);
 
     if (!saleResponse.success) {
@@ -99,8 +98,6 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
     }
 
     const saleData = saleResponse.data;
-
-    // Use passed salespersons
     const salespersonObj = spList.find(sp => sp.salespersonId === saleData.salespersonId);
 
     setCurrentSaleId(saleId);
@@ -109,7 +106,6 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
     setCurrentSalesperson(salespersonObj || null);
     setComments(saleData.comments || '');
 
-    // Keep original sale date format
     if (saleData.saleDate) {
       const localDateTime = saleData.saleDate.slice(0, 16);
       setSaleDate(localDateTime);
@@ -117,26 +113,41 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
       setSaleDate('');
     }
 
-    // ✅ Use the passed productList instead of products state
     const allProducts = productList;
 
     const cartItems = Array.isArray(saleData.saleDetails)
-      ? saleData.saleDetails.map(detail => {
-          const product = allProducts.find(p => p.productId === detail.productId);
-          return {
-            saleDetailId: detail.saleDetailId,
-            productId: detail.productId,
-            name: product?.name || `Product ${detail.productId}`,
-            code: product?.code || '',
-            retailPrice: detail.retailPrice || 0,
-            quantity: detail.quantity || 1,
-            discount: detail.discount || 0,
-            rowState: 'Unchanged'
-          };
-        })
-      : [];
+  ? saleData.saleDetails
+      .filter(
+        (detail, index, self) =>
+          self.findIndex(d => d.productId === detail.productId) === index // 🧩 prevent duplicates by productId
+      )
+      .map(detail => {
+        const product = allProducts.find(p => p.productId === detail.productId);
+        return {
+          saleDetailId: detail.saleDetailId,
+          productId: detail.productId,
+          name: product?.name || `Product ${detail.productId}`,
+          code: product?.code || '',
+          retailPrice: detail.retailPrice || 0,
+          quantity: detail.quantity || 1,
+          discount: detail.discount || 0,
+          rowState: 'Unchanged',
+        };
+      })
+  : [];
 
+    // 🧩 Set initial cart
     setCart(cartItems);
+
+    // ✅ Remove accidental duplicate products safely
+    setTimeout(() => {
+      setCart(prev =>
+        prev.filter(
+          (v, i, a) => a.findIndex(t => t.productId === v.productId) === i
+        )
+      );
+    }, 0);
+
   } catch (error) {
     console.error('Error loading sale:', error);
     Swal.fire('Error', error.message, 'error');
@@ -145,6 +156,7 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
     setLoading(false);
   }
 };
+
 
 
 
@@ -175,30 +187,51 @@ const openProductModal = async () => {
     }
   };
 
-  const addToCart = (product) => {
-    const existingItem = cart.find(item => item.productId === product.productId);
+const addToCart = (product) => {
+  setCart(prevCart => {
+    const existingItem = prevCart.find(item => item.productId === product.productId);
+
     if (existingItem) {
-      setCart(cart.map(item =>
+      // 🟢 If item was deleted before, reactivate it
+      if (existingItem.rowState === 'Deleted') {
+        return prevCart.map(item =>
+          item.productId === product.productId
+            ? { ...item, rowState: 'Modified', quantity: 1 } // restore item
+            : item
+        );
+      }
+
+      // 🟢 If item already exists, increase quantity
+      return prevCart.map(item =>
         item.productId === product.productId
-          ? { ...item, quantity: item.quantity + 1, 
-             rowState: item.rowState === 'Unchanged' ? 'Modified' : item.rowState // mark modified if already existed
-           }
+          ? { 
+              ...item, 
+              quantity: item.quantity + 1,
+              rowState: item.rowState === 'Unchanged' ? 'Modified' : item.rowState 
+            }
           : item
-      ));
-    } else {
-      setCart([...cart, {
+      );
+    }
+
+    // 🟢 Add brand new item
+    return [
+      ...prevCart,
+      {
         productId: product.productId,
         name: product.name,
         code: product.code,
         retailPrice: product.retailPrice || 0,
         quantity: 1,
         discount: 0,
-           rowState: 'Added' 
-      }]);
-    }
-    setProductSearch('');
-   // setShowProductModal(false);
-  };
+        rowState: 'Added'
+      }
+    ];
+  });
+
+  setProductSearch('');
+  // setShowProductModal(false);
+};
+
 
 const updateCartItem = (productId, field, value) => {
   setCart(cart.map(item => {
@@ -539,7 +572,8 @@ const handleSaveRecord = async () => {
               <div className="bg-gradient-to-r from-indigo-500 to-purple-500 px-6 py-4 flex items-center justify-between">
                 <h2 className="text-xl font-bold text-white flex items-center gap-2">
                   <ShoppingCart className="w-6 h-6" />
-                 Sale Items ({cart.length} items)
+             Sale Items ({cart.filter(i => i.rowState !== 'Deleted').length} items)
+
                 </h2>
                 <div className="flex items-center gap-4">
                   <input
