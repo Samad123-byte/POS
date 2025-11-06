@@ -312,7 +312,7 @@ const handleSaveRecord = async () => {
       saleData.saleId = currentSaleId;
       saleData.updatedDate = new Date().toISOString();
 
-      const response = await saleService.update(currentSaleId, saleData);
+      const response = await saleService.update( saleData);
 
       if (response.success) {
         Swal.fire('Success', 'Sale updated successfully!', 'success');

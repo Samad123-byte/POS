@@ -7,31 +7,31 @@ export const productService = {
     });
     return res.data;
   },
+  
   getById: async (id) => {
-    const res = await apiClient.get(`/Products/getById/${id}`);
+    const res = await apiClient.post('/Products/getById', { id }); // ✅ Fixed to POST with body
     return res.data;
   },
- create: async (product) => {
-  try {
-    const res = await apiClient.post('/Products/create', product);
-    return res.data;
-  } catch (error) {
-    // error.response contains backend JSON { success, message }
-    if (error.response && error.response.data) {
-      return error.response.data;
+  
+  create: async (product) => {
+    try {
+      const res = await apiClient.post('/Products/create', product);
+      return res.data;
+    } catch (error) {
+      if (error.response && error.response.data) {
+        return error.response.data;
+      }
+      return { success: false, message: "Unknown error occurred." };
     }
-    return { success: false, message: "Unknown error occurred." };
-  }
- },
+  },
 
   update: async (product) => {
     const res = await apiClient.post('/Products/update', product);
     return res.data;
   },
+  
   delete: async (id) => {
-  const res = await apiClient.post('/Products/delete', { id }); // <-- wrap in object
-  return res.data;
-}
-
+    const res = await apiClient.post('/Products/delete', { id }); // ✅ Already correct
+    return res.data;
+  }
 };
-

@@ -51,26 +51,42 @@ const Salesperson = () => {
   };
 
   const handleAddSalesperson = async (salespersonData) => {
-    try {
-      await salespersonService.create(salespersonData);
-      Swal.fire('Success', 'Salesperson added successfully!', 'success');
-      // ✅ Go to page 1 to see new salesperson at top
-      setCurrentPage(1);
-      loadSalespersons();
-    } catch (error) {
-      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+  try {
+    const response = await salespersonService.create(salespersonData);
+    
+    // ✅ Check backend response
+    if (!response.success) {
+      Swal.fire('Error', response.message, 'error');
+      return response; // Return response so modal can handle it
     }
-  };
+    
+    Swal.fire('Success', 'Salesperson added successfully!', 'success');
+    setCurrentPage(1);
+    loadSalespersons();
+    return response;
+  } catch (error) {
+    const errorMsg = error.response?.data?.message || error.message;
+    Swal.fire('Error', errorMsg, 'error');
+    return { success: false, message: errorMsg };
+  }
+};
 
-  const handleUpdateSalesperson = async (salespersonData) => {
-    try {
-      await salespersonService.update(salespersonData);
-      Swal.fire('Success', 'Salesperson updated successfully!', 'success');
-      loadSalespersons();
-    } catch (error) {
-      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+ const handleUpdateSalesperson = async (salespersonData) => {
+  try {
+    const response = await salespersonService.update(salespersonData);
+    
+    // ✅ Check if backend returned success: false
+    if (!response.success) {
+      Swal.fire('Error', response.message, 'error');
+      return;
     }
-  };
+    
+    Swal.fire('Success', 'Salesperson updated successfully!', 'success');
+    loadSalespersons();
+  } catch (error) {
+    Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+  }
+};
 
   const handleDeleteSalesperson = async (salespersonId) => {
     const result = await Swal.fire({

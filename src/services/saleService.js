@@ -7,26 +7,29 @@ export const saleService = {
     });
     return res.data;
   },
+  
   getById: async (id) => {
-    const res = await apiClient.get(`/Sales/${id}`);
+    const res = await apiClient.post('/Sales/getById', { id });
     return res.data;
   },
+  
   getWithDetails: async (id) => {
-    const res = await apiClient.get(`/Sales/${id}/WithDetails`);
+    const res = await apiClient.post('/Sales/getByIdWithDetails', { id });
     return res.data;
   },
+  
   create: async (sale) => {
     const res = await apiClient.post('/Sales', sale);
     return res.data;
   },
-  update: async (id, sale) => {
-    const res = await apiClient.put(`/Sales/${id}`, sale);
+  
+  update: async (sale) => {
+    const res = await apiClient.post('/Sales/update', sale);
     return res.data;
   },
+  
   delete: async (id) => {
-    const res = await apiClient.delete(`/Sales/${id}`);
+    const res = await apiClient.post('/Sales/delete', { id });
     return res.data;
-  },
- 
-
+  }
 };
