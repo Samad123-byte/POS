@@ -81,32 +81,20 @@ const handleAddProduct = async (productData) => {
 };
 
 
- const handleUpdateProduct = async (productData) => {
-  try {
-    const data = {
-      ...productData,
-      costPrice: parseFloat(productData.costPrice) || 0,
-      retailPrice: parseFloat(productData.retailPrice) || 0
-    };
-
-    const res = await productService.update(data);
-
-    if (res.success) {
-      Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
+  const handleUpdateProduct = async (productData) => {
+    try {
+      const data = {
+        ...productData,
+        costPrice: parseFloat(productData.costPrice) || 0,
+        retailPrice: parseFloat(productData.retailPrice) || 0
+      };
+      await productService.update(data);
+      Swal.fire('Success', 'Product updated successfully!', 'success');
       loadProducts();
-    } else {
-      Swal.fire('Error', res.message || 'Failed to update product', 'error');
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
     }
-
-  } catch (error) {
-    const message =
-      error.response?.data?.message ||
-      error.message ||
-      'Something went wrong';
-    Swal.fire('Error', message, 'error');
-  }
-};
-
+  };
 
   const handleDeleteProduct = async (productId) => {
     const result = await Swal.fire({
