@@ -1,15 +1,13 @@
 import apiClient from './apiClient';
 
 export const salespersonService = {
-  getAll: async (pageNumber = 1, pageSize = 10) => {
-    const res = await apiClient.get('/Salesperson/getall', {
-      params: { pageNumber, pageSize }
-    });
+  getAll: async () => {
+    const res = await apiClient.get('/Salesperson/getall'); // no params
     return res.data;
   },
   
   getById: async (id) => {
-    const res = await apiClient.post('/Salesperson/getById', { id }); // ✅ Changed to POST with body
+    const res = await apiClient.post('/Salesperson/getById', { id });
     return res.data;
   },
   
@@ -24,7 +22,7 @@ export const salespersonService = {
   },
   
   delete: async (id) => {
-    const res = await apiClient.post('/Salesperson/delete', { id }); // ✅ Already correct
+    const res = await apiClient.post('/Salesperson/delete', { id });
     return res.data;
   }
 };

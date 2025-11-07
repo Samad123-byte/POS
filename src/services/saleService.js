@@ -1,10 +1,8 @@
 import apiClient from './apiClient';
 
 export const saleService = {
-  getAll: async (pageNumber = 1, pageSize = 10) => {
-    const res = await apiClient.get('/Sales', {
-      params: { pageNumber, pageSize }
-    });
+  getAll: async () => {
+    const res = await apiClient.get('/Sales'); // No params needed
     return res.data;
   },
   
