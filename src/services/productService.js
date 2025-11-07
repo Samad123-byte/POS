@@ -1,15 +1,13 @@
 import apiClient from './apiClient';
 
 export const productService = {
-  getAll: async (pageNumber = 1, pageSize = 10) => {
-    const res = await apiClient.get('/Products/getAll', {
-      params: { pageNumber, pageSize }
-    });
+  getAll: async () => {
+    const res = await apiClient.get('/Products/getAll'); // No params needed
     return res.data;
   },
   
   getById: async (id) => {
-    const res = await apiClient.post('/Products/getById', { id }); // ✅ Fixed to POST with body
+    const res = await apiClient.post('/Products/getById', { id });
     return res.data;
   },
   
@@ -31,7 +29,7 @@ export const productService = {
   },
   
   delete: async (id) => {
-    const res = await apiClient.post('/Products/delete', { id }); // ✅ Already correct
+    const res = await apiClient.post('/Products/delete', { id });
     return res.data;
   }
 };
