@@ -58,39 +58,55 @@ const handleAddProduct = async (productData) => {
       retailPrice: parseFloat(productData.retailPrice) || 0
     };
 
-    // ✅ Call the service and get the backend response
     const res = await productService.create(data);
 
     if (res.success) {
       Swal.fire('Success', res.message || 'Product added successfully!', 'success');
-      setCurrentPage(1); // optional: go to first page to see new product
+      setCurrentPage(1);
       loadProducts();
     } else {
+      // 👇 Always show backend message if duplicate or validation failed
       Swal.fire('Error', res.message || 'Failed to create product', 'error');
     }
 
-    return res; // ✅ important: return response for modal
+    return res;
   } catch (error) {
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'Something went wrong';
     Swal.fire('Error', message, 'error');
     return { success: false, message };
   }
 };
 
-  const handleUpdateProduct = async (productData) => {
-    try {
-      const data = {
-        ...productData,
-        costPrice: parseFloat(productData.costPrice) || 0,
-        retailPrice: parseFloat(productData.retailPrice) || 0
-      };
-      await productService.update(data);
-      Swal.fire('Success', 'Product updated successfully!', 'success');
+
+ const handleUpdateProduct = async (productData) => {
+  try {
+    const data = {
+      ...productData,
+      costPrice: parseFloat(productData.costPrice) || 0,
+      retailPrice: parseFloat(productData.retailPrice) || 0
+    };
+
+    const res = await productService.update(data);
+
+    if (res.success) {
+      Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
       loadProducts();
-    } catch (error) {
-      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+    } else {
+      Swal.fire('Error', res.message || 'Failed to update product', 'error');
     }
-  };
+
+  } catch (error) {
+    const message =
+      error.response?.data?.message ||
+      error.message ||
+      'Something went wrong';
+    Swal.fire('Error', message, 'error');
+  }
+};
+
 
   const handleDeleteProduct = async (productId) => {
     const result = await Swal.fire({
