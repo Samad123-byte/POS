@@ -1,85 +1,88 @@
 import React, { useState, useEffect } from 'react';
-import { Eye, FileText } from 'lucide-react';
+import { Eye, FileText, Search } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { saleService } from '../services/saleService';
-//import { salespersonService } from '../services/salespersonService';
-
 import Pagination from './Pagination';
 
 const Records = ({ onEditSale }) => {
   const [sales, setSales] = useState([]);
-  const [salespersons, setSalespersons] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [expandedRow, setExpandedRow] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
-useEffect(() => {
-  fetchSales();
-}, [currentPage]);
+  // ✅ Load sales from backend with pagination
+  useEffect(() => {
+    fetchSales();
+  }, [currentPage]); // ✅ Re-fetch when page changes
 
-
-
-const handleDeleteSale = async (saleId) => {
-  const confirmResult = await Swal.fire({
-    title: `Delete Sale #${saleId}?`,
-    text: "This action cannot be undone.",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Yes, delete it!'
-  });
-
-  if (confirmResult.isConfirmed) {
+  const fetchSales = async () => {
+    setLoading(true);
     try {
-      const response = await saleService.delete(saleId);
-      // Show backend message
-      Swal.fire('Deleted!', response.message || 'Sale has been deleted.', 'success');
+      // ✅ Calculate startIndex and endIndex (0-based)
+      const startIndex = (currentPage - 1) * pageSize; // Page 1: 0, Page 2: 10
+      const endIndex = startIndex + pageSize - 1;      // Page 1: 9, Page 2: 19
 
-      // Refresh sales list
-      fetchSales();
+      console.log('🔄 Fetching sales:', { currentPage, startIndex, endIndex });
+
+      // ✅ Backend returns ONLY the requested page
+      const response = await saleService.getAll(startIndex, endIndex);
+      
+      console.log('✅ Response:', {
+        itemsReceived: response.data?.length,
+        totalRecords: response.totalRecords,
+        startIndex: response.startIndex,
+        endIndex: response.endIndex
+      });
+
+      const salesData = response.data || [];
+
+      // Safe mapping
+      const enrichedSales = salesData.map(sale => ({
+        ...sale,
+        salespersonName: sale.salespersonName || "N/A"
+      }));
+
+      setSales(enrichedSales);
+      setTotalRecords(response.totalRecords || 0);
     } catch (error) {
-      console.error('Delete failed:', error);
-      const message = error.response?.data?.message || 'Failed to delete sale';
-      Swal.fire('Error', message, 'error');
+      console.error("Failed to fetch sales:", error);
+      Swal.fire('Error', 'Failed to fetch sales records', 'error');
     }
-  }
-};
+    setLoading(false);
+  };
 
+  const handleDeleteSale = async (saleId) => {
+    const confirmResult = await Swal.fire({
+      title: `Delete Sale #${saleId}?`,
+      text: "This action cannot be undone.",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Yes, delete it!'
+    });
 
-
-
-const fetchSales = async () => {
-  setLoading(true);
-  try {
-    const response = await saleService.getAll(currentPage, pageSize);
-    const salesData = response.data || [];
-
-    // Safe mapping (no crash if name missing)
-    const enrichedSales = salesData.map(sale => ({
-      ...sale,
-      salespersonName: sale.salespersonName || "N/A"
-    }));
-
-    setSales(enrichedSales);
-    setTotalPages(response.totalPages || 1);
-    setTotalRecords(response.totalRecords || 0);
-  } catch (error) {
-    console.error("Failed to fetch sales:", error);
-    Swal.fire('Error', 'Failed to fetch sales records', 'error');
-  }
-  setLoading(false);
-};
-
+    if (confirmResult.isConfirmed) {
+      try {
+        const response = await saleService.delete(saleId);
+        Swal.fire('Deleted!', response.message || 'Sale has been deleted.', 'success');
+        fetchSales(); // ✅ Reload current page
+      } catch (error) {
+        console.error('Delete failed:', error);
+        const message = error.response?.data?.message || 'Failed to delete sale';
+        Swal.fire('Error', message, 'error');
+      }
+    }
+  };
 
   const handleRowDoubleClick = (saleId) => {
     if (onEditSale) {
       const selectedSale = sales.find(s => s.saleId === saleId);
       if (selectedSale) {
-        onEditSale(saleId); // pass entire sale object including salespersonName
+        onEditSale(saleId);
       }
     }
   };
@@ -107,6 +110,13 @@ const fetchSales = async () => {
     return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
   };
 
+  // Handle page change - triggers new API call
+  const handlePageChange = (newPage) => {
+    console.log('📍 Changing page from', currentPage, 'to', newPage);
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -126,6 +136,46 @@ const fetchSales = async () => {
                 <div className="text-white text-2xl font-bold">{totalRecords}</div>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Search Bar */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
+            <input 
+              type="text" 
+              placeholder="Search by Sale ID, Salesperson, or Comments..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border-2 border-gray-300 rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            />
+          </div>
+        </div>
+
+        {/* Debug Info */}
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+          <div className="font-bold text-blue-800 mb-2"></div>
+          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Current Page</div>
+              <div className="text-xl font-bold">{currentPage}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Page Size</div>
+              <div className="text-xl font-bold">{pageSize}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Items on Page</div>
+              <div className="text-xl font-bold">{sales.length}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Total Records</div>
+              <div className="text-xl font-bold">{totalRecords}</div>
+            </div>
+          </div>
+          <div className="mt-3 text-xs text-blue-800">
+           
           </div>
         </div>
 
@@ -153,17 +203,8 @@ const fetchSales = async () => {
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Created</th>
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Updated</th>
                       <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Total Amount</th>
-                    
- 
-
                       <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Actions</th>
-
-             
-
-
                     </tr>
-
-
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {sales.map(sale => (
@@ -185,7 +226,7 @@ const fetchSales = async () => {
                             <div className="flex items-center gap-2">
                               <div className="bg-purple-100 rounded-full w-8 h-8 flex items-center justify-center">
                                 <span className="text-purple-700 font-bold text-sm">
-                                  {sale.salespersonName?.charAt(0) || "N/A"}
+                                  {sale.salespersonName?.charAt(0) || "N"}
                                 </span>
                               </div>
                               <span className="font-semibold text-gray-900">
@@ -210,26 +251,19 @@ const fetchSales = async () => {
                               <span className="text-xl font-bold text-green-700">${sale.total?.toFixed(2)}</span>
                             </div>
                           </td>
-
-
-
-<td className="px-6 py-4 text-right flex justify-end gap-2">
-  <button
-    onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.saleId); }}
-    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm"
-  >
-    Delete
-  </button>
-</td>
-
-
+                          <td className="px-6 py-4 text-right flex justify-end gap-2">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleDeleteSale(sale.saleId); }}
+                              className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg text-sm"
+                            >
+                              Delete
+                            </button>
+                          </td>
                         </tr>
-
-
 
                         {expandedRow === sale.saleId && sale.comments && (
                           <tr className="bg-gradient-to-r from-blue-50 to-indigo-50">
-                            <td colSpan="7" className="px-6 py-4">
+                            <td colSpan="8" className="px-6 py-4">
                               <div className="bg-white rounded-xl p-5 border-2 border-blue-200 shadow-inner">
                                 <div className="flex items-start gap-3">
                                   <div className="bg-blue-100 rounded-full p-2">
@@ -248,28 +282,28 @@ const fetchSales = async () => {
                     ))}
                     {sales.length === 0 && (
                       <tr>
-                        <td colSpan="7" className="px-6 py-12 text-center">
+                        <td colSpan="8" className="px-6 py-12 text-center">
                           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                           <p className="text-gray-500 text-lg font-medium">No sales records found</p>
                           <p className="text-gray-400 text-sm mt-2">Create your first sale to see it here</p>
                         </td>
                       </tr>
                     )}
-
                   </tbody>
                 </table>
               </div>
             </div>
 
-            <div className="mt-6">
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalRecords={totalRecords}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+            {totalRecords > 0 && (
+              <div className="mt-6">
+                <Pagination 
+                  currentPage={currentPage}
+                  totalRecords={totalRecords}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

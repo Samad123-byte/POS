@@ -23,7 +23,7 @@ const [currentTime, setCurrentTime] = useState(new Date());
 const [deletedItems, setDeletedItems] = useState([]);
 
 
-// ✅ Close product modal on Esc key
+// âœ… Close product modal on Esc key
 useEffect(() => {
   const handleEsc = (e) => {
     if (e.key === "Escape" && showProductModal) {
@@ -41,7 +41,7 @@ useEffect(() => {
 }, []);
 
 
-// 🕒 Auto-fill current live time until user picks
+// ðŸ•’ Auto-fill current live time until user picks
 useEffect(() => {
   if (!saleDate) {
     const timer = setInterval(() => {
@@ -72,7 +72,7 @@ const productList = productResponse.data || [];
 setSalespersons(spList);
 setProducts(productList);
 
-// ✅ If editing, load sale details
+// âœ… If editing, load sale details
 if (editingSaleId) {
   await loadSaleForEdit(editingSaleId, spList,  productList);
 }
@@ -119,7 +119,7 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
   ? saleData.saleDetails
       .filter(
         (detail, index, self) =>
-          self.findIndex(d => d.productId === detail.productId) === index // 🧩 prevent duplicates by productId
+          self.findIndex(d => d.productId === detail.productId) === index // ðŸ§© prevent duplicates by productId
       )
       .map(detail => {
         const product = allProducts.find(p => p.productId === detail.productId);
@@ -136,10 +136,10 @@ const loadSaleForEdit = async (saleId, spList, productList) => {
       })
   : [];
 
-    // 🧩 Set initial cart
+    // ðŸ§© Set initial cart
     setCart(cartItems);
 
-    // ✅ Remove accidental duplicate products safely
+    // âœ… Remove accidental duplicate products safely
     setTimeout(() => {
       setCart(prev =>
         prev.filter(
@@ -482,12 +482,12 @@ setCart([]);
         <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
         <input
           type="text"
-          placeholder="🔍 Search products by name or code..."
+          placeholder="ðŸ” Search products by name or code..."
           value={productSearch}
           onChange={(e) => setProductSearch(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
-              e.preventDefault(); // ✅ stops form submit or modal close
+              e.preventDefault(); // âœ… stops form submit or modal close
               const match = filteredProducts.find(
                 (p) =>
                   p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
@@ -532,7 +532,7 @@ setCart([]);
               </h3>
               <button
                 onClick={(e) => {
-                  e.preventDefault(); // ✅ prevents any accidental form submit
+                  e.preventDefault(); // âœ… prevents any accidental form submit
                   addToCart(product); // stays open
                 }}
                 className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:from-purple-600 hover:to-pink-600 transition-all flex items-center justify-center gap-2"
@@ -558,7 +558,7 @@ setCart([]);
                 <div className="flex items-center gap-4">
                   <input
                     type="text"
-                    placeholder="Search items in sale…"
+                    placeholder="Search items in saleâ€¦"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="border-2 border-white rounded-lg px-4 py-2 text-sm w-64 focus:ring-2 focus:ring-white"

@@ -1,8 +1,11 @@
 import apiClient from './apiClient';
 
 export const productService = {
-  getAll: async () => {
-    const res = await apiClient.get('/Products/getAll'); // No params needed
+  // ✅ Now sends StartIndex and EndIndex
+  getAll: async (startIndex = 0, endIndex = 9) => {
+    const res = await apiClient.get('/Products/getAll', {
+      params: { startIndex, endIndex }
+    });
     return res.data;
   },
   

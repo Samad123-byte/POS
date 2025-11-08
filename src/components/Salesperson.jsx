@@ -2,22 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Plus, Search, Users } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { salespersonService } from '../services/salespersonService';
-import AddSalespersonModal from './AddSalespersonModal';
-import EditSalespersonModal from './EditSalespersonModal';
 import Pagination from './Pagination';
+import   AddSalespersonModal from './AddSalespersonModal'
+import EditSalespersonModal from './EditSalespersonModal'
 
 const Salesperson = () => {
   const [salespersons, setSalespersons] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingSalesperson, setEditingSalesperson] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const formatDateTime = (dateString) => {
     if (!dateString) return 'N/A';
@@ -33,16 +31,31 @@ const Salesperson = () => {
     });
   };
 
+  // ✅ Load salespersons from backend with pagination
   useEffect(() => {
     loadSalespersons();
-  }, [currentPage]);
+  }, [currentPage]); // ✅ Re-fetch when page changes
 
   const loadSalespersons = async () => {
     setLoading(true);
     try {
-      const response = await salespersonService.getAll(currentPage, pageSize);
+      // ✅ Calculate startIndex and endIndex (0-based)
+      const startIndex = (currentPage - 1) * pageSize; // Page 1: 0, Page 2: 10
+      const endIndex = startIndex + pageSize - 1;      // Page 1: 9, Page 2: 19
+
+      console.log('🔄 Fetching salespersons:', { currentPage, startIndex, endIndex });
+
+      // ✅ Backend returns ONLY the requested page
+      const response = await salespersonService.getAll(startIndex, endIndex);
+      
+      console.log('✅ Response:', {
+        itemsReceived: response.data?.length,
+        totalRecords: response.totalRecords,
+        startIndex: response.startIndex,
+        endIndex: response.endIndex
+      });
+
       setSalespersons(response.data || []);
-      setTotalPages(response.totalPages || 1);
       setTotalRecords(response.totalRecords || 0);
     } catch (error) {
       Swal.fire('Error', error.message, 'error');
@@ -51,42 +64,40 @@ const Salesperson = () => {
   };
 
   const handleAddSalesperson = async (salespersonData) => {
-  try {
-    const response = await salespersonService.create(salespersonData);
-    
-    // ✅ Check backend response
-    if (!response.success) {
-      Swal.fire('Error', response.message, 'error');
-      return response; // Return response so modal can handle it
+    try {
+      const response = await salespersonService.create(salespersonData);
+      
+      if (!response.success) {
+        Swal.fire('Error', response.message, 'error');
+        return response;
+      }
+      
+      Swal.fire('Success', 'Salesperson added successfully!', 'success');
+      setCurrentPage(1); // Go to first page
+      loadSalespersons();
+      return response;
+    } catch (error) {
+      const errorMsg = error.response?.data?.message || error.message;
+      Swal.fire('Error', errorMsg, 'error');
+      return { success: false, message: errorMsg };
     }
-    
-    Swal.fire('Success', 'Salesperson added successfully!', 'success');
-    setCurrentPage(1);
-    loadSalespersons();
-    return response;
-  } catch (error) {
-    const errorMsg = error.response?.data?.message || error.message;
-    Swal.fire('Error', errorMsg, 'error');
-    return { success: false, message: errorMsg };
-  }
-};
+  };
 
- const handleUpdateSalesperson = async (salespersonData) => {
-  try {
-    const response = await salespersonService.update(salespersonData);
-    
-    // ✅ Check if backend returned success: false
-    if (!response.success) {
-      Swal.fire('Error', response.message, 'error');
-      return;
+  const handleUpdateSalesperson = async (salespersonData) => {
+    try {
+      const response = await salespersonService.update(salespersonData);
+      
+      if (!response.success) {
+        Swal.fire('Error', response.message, 'error');
+        return;
+      }
+      
+      Swal.fire('Success', 'Salesperson updated successfully!', 'success');
+      loadSalespersons(); // Reload current page
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
     }
-    
-    Swal.fire('Success', 'Salesperson updated successfully!', 'success');
-    loadSalespersons();
-  } catch (error) {
-    Swal.fire('Error', error.response?.data?.message || error.message, 'error');
-  }
-};
+  };
 
   const handleDeleteSalesperson = async (salespersonId) => {
     const result = await Swal.fire({
@@ -119,50 +130,11 @@ const Salesperson = () => {
     setShowEditModal(true);
   };
 
-  const filteredSalespersons = salespersons.filter(sp =>
-    sp.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sp.code?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortedSalespersons = React.useMemo(() => {
-    if (!sortConfig.key) return filteredSalespersons;
-
-    return [...filteredSalespersons].sort((a, b) => {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-
-      if (sortConfig.key === 'salespersonId') {
-        aValue = parseInt(aValue) || 0;
-        bValue = parseInt(bValue) || 0;
-      } else if (sortConfig.key === 'enteredDate') {
-        aValue = new Date(aValue || '1900-01-01').getTime();
-        bValue = new Date(bValue || '1900-01-01').getTime();
-      } else {
-        aValue = aValue?.toString().toLowerCase() || '';
-        bValue = bValue?.toString().toLowerCase() || '';
-      }
-
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredSalespersons, sortConfig]);
-
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) {
-      return <span className="ml-1 text-gray-300">↕</span>;
-    }
-    return sortConfig.direction === 'asc' ? 
-      <span className="ml-1 text-white">↑</span> : 
-      <span className="ml-1 text-white">↓</span>;
+  // Handle page change - triggers new API call
+  const handlePageChange = (newPage) => {
+    console.log('📍 Changing page from', currentPage, 'to', newPage);
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -212,6 +184,33 @@ const Salesperson = () => {
           </div>
         </div>
 
+        {/* Debug Info */}
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+          <div className="font-bold text-blue-800 mb-2"></div>
+          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Current Page</div>
+              <div className="text-xl font-bold">{currentPage}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Page Size</div>
+              <div className="text-xl font-bold">{pageSize}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Items on Page</div>
+              <div className="text-xl font-bold">{salespersons.length}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Total Records</div>
+              <div className="text-xl font-bold">{totalRecords}</div>
+            </div>
+          </div>
+          <div className="mt-3 text-xs text-blue-800">
+            <br/>
+           
+          </div>
+        </div>
+
         {loading ? (
           <div className="bg-white rounded-2xl shadow-xl p-12">
             <div className="flex flex-col items-center justify-center">
@@ -226,36 +225,16 @@ const Salesperson = () => {
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                     <tr>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('salespersonId')}
-                      >
-                        ID {getSortIcon('salespersonId')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('name')}
-                      >
-                        Name {getSortIcon('name')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('code')}
-                      >
-                        Code {getSortIcon('code')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('enteredDate')}
-                      >
-                        Created {getSortIcon('enteredDate')}
-                      </th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">ID</th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Code</th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Created</th>
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Updated</th>
                       <th className="px-6 py-4 text-center font-bold text-sm uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {sortedSalespersons.length === 0 ? (
+                    {salespersons.length === 0 ? (
                       <tr>
                         <td colSpan="6" className="px-6 py-12 text-center">
                           <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -264,7 +243,7 @@ const Salesperson = () => {
                         </td>
                       </tr>
                     ) : (
-                      sortedSalespersons.map(sp => (
+                      salespersons.map(sp => (
                         <tr key={sp.salespersonId} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
                           <td className="px-6 py-4">
                             <div className="bg-indigo-100 rounded-lg px-3 py-1 inline-block">
@@ -322,31 +301,37 @@ const Salesperson = () => {
               </div>
             </div>
 
-            <div className="mt-6">
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalRecords={totalRecords}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+            {totalRecords > 0 && (
+              <div className="mt-6">
+                <Pagination 
+                  currentPage={currentPage}
+                  totalRecords={totalRecords}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+
+            {showAddModal && (
+  <AddSalespersonModal
+    isOpen={showAddModal}
+    onClose={() => setShowAddModal(false)}
+    onAdd={handleAddSalesperson}
+    existingSalespersons={salespersons}
+  />
+)}
+
+{showEditModal && (
+  <EditSalespersonModal
+    isOpen={showEditModal}
+    onClose={() => setShowEditModal(false)}
+    onUpdate={handleUpdateSalesperson}
+    salesperson={editingSalesperson}
+  />
+)}
+
           </>
         )}
-
-        <AddSalespersonModal 
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddSalesperson}
-            existingSalespersons={salespersons}
-        />
-
-        <EditSalespersonModal 
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onUpdate={handleUpdateSalesperson}
-          salesperson={editingSalesperson}
-        />
       </div>
     </div>
   );

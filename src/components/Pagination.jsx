@@ -1,7 +1,11 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const Pagination = ({ currentPage, totalPages, totalRecords, pageSize, onPageChange }) => {
+const Pagination = ({ currentPage, totalRecords, pageSize, onPageChange }) => {
+  // ✅ Calculate total pages based on ALL data
+  const totalPages = Math.ceil(totalRecords / pageSize);
+  
+  // ✅ Calculate which records are being shown on current page
   const startRecord = ((currentPage - 1) * pageSize) + 1;
   const endRecord = Math.min(currentPage * pageSize, totalRecords);
 
