@@ -100,6 +100,7 @@ const Products = () => {
 
       const res = await productService.update(data);
 
+<<<<<<< HEAD
       if (res.success) {
         Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
         loadProducts(); // Reload current page
@@ -109,6 +110,20 @@ const Products = () => {
     } catch (error) {
       const message = error.response?.data?.message || error.message || 'Something went wrong';
       Swal.fire('Error', message, 'error');
+=======
+  const handleUpdateProduct = async (productData) => {
+    try {
+      const data = {
+        ...productData,
+        costPrice: parseFloat(productData.costPrice) || 0,
+        retailPrice: parseFloat(productData.retailPrice) || 0
+      };
+      await productService.update(data);
+      Swal.fire('Success', 'Product updated successfully!', 'success');
+      loadProducts();
+    } catch (error) {
+      Swal.fire('Error', error.response?.data?.message || error.message, 'error');
+>>>>>>> 2e4990d79bc831642898564ec4f6df3bb2c90c36
     }
   };
 
