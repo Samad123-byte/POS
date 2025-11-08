@@ -2,22 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Edit2, Trash2, Plus, Search, Package } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { productService } from '../services/productService';
+import Pagination from './Pagination';
 import AddProductModal from './AddProductModal';
 import EditProductModal from './EditProductModal';
-import Pagination from './Pagination';
+
 
 const Products = () => {
   const [products, setProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
 
   const formatDateTime = (dateString) => {
     if (!dateString) return 'N/A';
@@ -33,16 +32,31 @@ const Products = () => {
     });
   };
 
+  // ✅ Load products from backend with pagination
   useEffect(() => {
     loadProducts();
-  }, [currentPage]);
+  }, [currentPage]); // ✅ Re-fetch when page changes
 
   const loadProducts = async () => {
     setLoading(true);
     try {
-      const response = await productService.getAll(currentPage, pageSize);
+      // ✅ Calculate startIndex and endIndex (0-based)
+      const startIndex = (currentPage - 1) * pageSize; // Page 1: 0, Page 2: 10
+      const endIndex = startIndex + pageSize - 1;      // Page 1: 9, Page 2: 19
+
+      console.log('🔄 Fetching products:', { currentPage, startIndex, endIndex });
+
+      // ✅ Backend returns ONLY the requested page
+      const response = await productService.getAll(startIndex, endIndex);
+      
+      console.log('✅ Response:', {
+        itemsReceived: response.data?.length,
+        totalRecords: response.totalRecords,
+        startIndex: response.startIndex,
+        endIndex: response.endIndex
+      });
+
       setProducts(response.data || []);
-      setTotalPages(response.totalPages || 1);
       setTotalRecords(response.totalRecords || 0);
     } catch (error) {
       Swal.fire('Error', error.message, 'error');
@@ -50,56 +64,53 @@ const Products = () => {
     setLoading(false);
   };
 
-const handleAddProduct = async (productData) => {
-  try {
-    const data = {
-      ...productData,
-      costPrice: parseFloat(productData.costPrice) || 0,
-      retailPrice: parseFloat(productData.retailPrice) || 0
-    };
+  const handleAddProduct = async (productData) => {
+    try {
+      const data = {
+        ...productData,
+        costPrice: parseFloat(productData.costPrice) || 0,
+        retailPrice: parseFloat(productData.retailPrice) || 0
+      };
 
-    // ✅ Call the service and get the backend response
-    const res = await productService.create(data);
+      const res = await productService.create(data);
 
-    if (res.success) {
-      Swal.fire('Success', res.message || 'Product added successfully!', 'success');
-      setCurrentPage(1); // optional: go to first page to see new product
-      loadProducts();
-    } else {
-      Swal.fire('Error', res.message || 'Failed to create product', 'error');
+      if (res.success) {
+        Swal.fire('Success', res.message || 'Product added successfully!', 'success');
+        setCurrentPage(1); // Go to first page
+        loadProducts();
+      } else {
+        Swal.fire('Error', res.message || 'Failed to create product', 'error');
+      }
+
+      return res;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Something went wrong';
+      Swal.fire('Error', message, 'error');
+      return { success: false, message };
     }
+  };
 
-    return res; // ✅ important: return response for modal
-  } catch (error) {
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
-    Swal.fire('Error', message, 'error');
-    return { success: false, message };
-  }
-};
+  const handleUpdateProduct = async (productData) => {
+    try {
+      const data = {
+        ...productData,
+        costPrice: parseFloat(productData.costPrice) || 0,
+        retailPrice: parseFloat(productData.retailPrice) || 0
+      };
 
-const handleUpdateProduct = async (productData) => {
-  try {
-    const data = {
-      ...productData,
-      costPrice: parseFloat(productData.costPrice) || 0,
-      retailPrice: parseFloat(productData.retailPrice) || 0
-    };
+      const res = await productService.update(data);
 
-    const res = await productService.update(data);
-
-    if (res.success) {
-      Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
-      loadProducts();
-    } else {
-      Swal.fire('Error', res.message || 'Failed to update product', 'error');
+      if (res.success) {
+        Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
+        loadProducts(); // Reload current page
+      } else {
+        Swal.fire('Error', res.message || 'Failed to update product', 'error');
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || 'Something went wrong';
+      Swal.fire('Error', message, 'error');
     }
-
-  } catch (error) {
-    const message = error.response?.data?.message || error.message || 'Something went wrong';
-    Swal.fire('Error', message, 'error');
-  }
-};
-
+  };
 
   const handleDeleteProduct = async (productId) => {
     const result = await Swal.fire({
@@ -132,56 +143,17 @@ const handleUpdateProduct = async (productData) => {
     setShowEditModal(true);
   };
 
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.code?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortedProducts = React.useMemo(() => {
-    if (!sortConfig.key) return filteredProducts;
-
-    return [...filteredProducts].sort((a, b) => {
-      let aValue = a[sortConfig.key];
-      let bValue = b[sortConfig.key];
-
-      if (sortConfig.key === 'costPrice' || sortConfig.key === 'retailPrice') {
-        aValue = parseFloat(aValue) || 0;
-        bValue = parseFloat(bValue) || 0;
-      } else if (sortConfig.key === 'productId') {
-        aValue = parseInt(aValue) || 0;
-        bValue = parseInt(bValue) || 0;
-      } else {
-        aValue = aValue?.toString().toLowerCase() || '';
-        bValue = bValue?.toString().toLowerCase() || '';
-      }
-
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [filteredProducts, sortConfig]);
-
-  const handleSort = (key) => {
-    let direction = 'asc';
-    if (sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const getSortIcon = (columnKey) => {
-    if (sortConfig.key !== columnKey) {
-      return <span className="ml-1 text-gray-300">↕</span>;
-    }
-    return sortConfig.direction === 'asc' ? 
-      <span className="ml-1 text-white">↑</span> : 
-      <span className="ml-1 text-white">↓</span>;
+  // Handle page change - triggers new API call
+  const handlePageChange = (newPage) => {
+    console.log('📍 Changing page from', currentPage, 'to', newPage);
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 p-6">
       <div className="max-w-7xl mx-auto">
-        {/* Header Card */}
+        {/* Header */}
         <div className="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
           <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 px-8 py-6">
             <div className="flex items-center justify-between">
@@ -225,6 +197,32 @@ const handleUpdateProduct = async (productData) => {
           </div>
         </div>
 
+        {/* Debug Info */}
+        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
+          <div className="font-bold text-blue-800 mb-2"></div>
+          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Current Page</div>
+              <div className="text-xl font-bold">{currentPage}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Page Size</div>
+              <div className="text-xl font-bold">{pageSize}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Items on Page</div>
+              <div className="text-xl font-bold">{products.length}</div>
+            </div>
+            <div className="bg-white p-3 rounded-lg">
+              <div className="text-xs text-gray-600">Total Records</div>
+              <div className="text-xl font-bold">{totalRecords}</div>
+            </div>
+          </div>
+          <div className="mt-3 text-xs text-blue-800">
+           
+          </div>
+        </div>
+
         {loading ? (
           <div className="bg-white rounded-2xl shadow-xl p-12">
             <div className="flex flex-col items-center justify-center">
@@ -239,52 +237,26 @@ const handleUpdateProduct = async (productData) => {
                 <table className="w-full">
                   <thead className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                     <tr>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('productId')}
-                      >
-                        ID {getSortIcon('productId')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('name')}
-                      >
-                        Product Name {getSortIcon('name')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('code')}
-                      >
-                        Code {getSortIcon('code')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('costPrice')}
-                      >
-                        Cost Price {getSortIcon('costPrice')}
-                      </th>
-                      <th 
-                        className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider cursor-pointer hover:bg-indigo-700 transition-colors"
-                        onClick={() => handleSort('retailPrice')}
-                      >
-                        Retail Price {getSortIcon('retailPrice')}
-                      </th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">ID</th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Product Name</th>
+                      <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Code</th>
+                      <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Cost Price</th>
+                      <th className="px-6 py-4 text-right font-bold text-sm uppercase tracking-wider">Retail Price</th>
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Created</th>
                       <th className="px-6 py-4 text-left font-bold text-sm uppercase tracking-wider">Updated</th>
                       <th className="px-6 py-4 text-center font-bold text-sm uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {sortedProducts.length === 0 ? (
+                    {products.length === 0 ? (
                       <tr>
                         <td colSpan="8" className="px-6 py-12 text-center">
                           <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                           <p className="text-gray-500 text-lg font-medium">No products found</p>
-                          <p className="text-gray-400 text-sm mt-2">Add your first product to get started</p>
                         </td>
                       </tr>
                     ) : (
-                      sortedProducts.map((product, index) => (
+                      products.map((product) => (
                         <tr key={product.productId} className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all duration-200">
                           <td className="px-6 py-4">
                             <div className="bg-indigo-100 rounded-lg px-3 py-1 inline-block">
@@ -343,31 +315,34 @@ const handleUpdateProduct = async (productData) => {
               </div>
             </div>
 
-            <div className="mt-6">
-              <Pagination 
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalRecords={totalRecords}
-                pageSize={pageSize}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+            {totalRecords > 0 && (
+              <div className="mt-6">
+                <Pagination 
+                  currentPage={currentPage}
+                  totalRecords={totalRecords}
+                  pageSize={pageSize}
+                  onPageChange={handlePageChange}
+                />
+              </div>
+            )}
+
+            {/* Add Product Modal */}
+<AddProductModal 
+  isOpen={showAddModal}
+  onClose={() => setShowAddModal(false)}
+  onAdd={handleAddProduct}
+/>
+
+{/* Edit Product Modal */}
+<EditProductModal 
+  isOpen={showEditModal}
+  onClose={() => setShowEditModal(false)}
+  onUpdate={handleUpdateProduct}
+  product={editingProduct}
+/>
+
           </>
         )}
-
-        <AddProductModal 
-          isOpen={showAddModal}
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddProduct}
-           existingProducts={products}
-        />
-
-        <EditProductModal 
-          isOpen={showEditModal}
-          onClose={() => setShowEditModal(false)}
-          onUpdate={handleUpdateProduct}
-          product={editingProduct}
-        />
       </div>
     </div>
   );

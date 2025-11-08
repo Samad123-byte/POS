@@ -192,28 +192,28 @@ const addToCart = (product) => {
     const existingItem = prevCart.find(item => item.productId === product.productId);
 
     if (existingItem) {
-      // 🟢 If item was deleted before, reactivate it
       if (existingItem.rowState === 'Deleted') {
+        // Restore deleted item
         return prevCart.map(item =>
           item.productId === product.productId
-            ? { ...item, rowState: 'Modified', quantity: 1 } // restore item
+            ? { ...item, rowState: 'Modified', quantity: 1 }
             : item
         );
       }
 
-      // 🟢 If item already exists, increase quantity
+      // Increase quantity for existing item
       return prevCart.map(item =>
         item.productId === product.productId
           ? { 
               ...item, 
               quantity: item.quantity + 1,
-              rowState: item.rowState === 'Unchanged' ? 'Modified' : item.rowState 
+              rowState: item.rowState === 'Unchanged' ? 'Modified' : item.rowState
             }
           : item
       );
     }
 
-    // 🟢 Add brand new item
+    // Add new item
     return [
       ...prevCart,
       {
@@ -229,33 +229,31 @@ const addToCart = (product) => {
   });
 
   setProductSearch('');
-  // setShowProductModal(false);
 };
+
 
 
 const updateCartItem = (productId, field, value) => {
-  setCart(cart.map(item => {
-    if (item.productId === productId) {
-      const updatedItem = { ...item, [field]: parseFloat(value) || 0 };
-
-      // ✅ Mark as Modified if it was previously Unchanged
-      if (item.rowState === 'Unchanged') {
-        updatedItem.rowState = 'Modified';
+  setCart(prevCart =>
+    prevCart.map(item => {
+      if (item.productId === productId) {
+        const updatedItem = { ...item, [field]: parseFloat(value) || 0 };
+        if (item.rowState === 'Unchanged') updatedItem.rowState = 'Modified';
+        return updatedItem;
       }
-
-      return updatedItem;
-    }
-    return item;
-  }));
+      return item;
+    })
+  );
 };
 
 
+
 const removeFromCart = (productId) => {
-  setCart(prev =>
-    prev.map(i =>
-      i.productId === productId
-        ? { ...i, rowState: 'Deleted' } // ✅ instantly mark as deleted
-        : i
+  setCart(prevCart =>
+    prevCart.map(item =>
+      item.productId === productId
+        ? { ...item, rowState: 'Deleted' } // Only send as deleted to backend
+        : item
     )
   );
 };
@@ -284,8 +282,12 @@ const handleSaveRecord = async () => {
     return;
   }
 
-  if (cart.filter(item => item.rowState !== 'Deleted').length === 0) {
-    Swal.fire('Warning', 'Please add products to cart', 'warning');
+ const activeCartItems = cart.filter(
+  item => item.rowState === 'Added' || item.rowState === 'Modified' || item.rowState === 'Deleted'
+);
+
+  if (activeCartItems.length === 0) {
+    Swal.fire('Warning', 'No changes to save', 'warning');
     return;
   }
 
@@ -298,50 +300,43 @@ const handleSaveRecord = async () => {
         ? new Date(new Date(saleDate).getTime() - new Date().getTimezoneOffset() * 60000).toISOString()
         : null,
       comments: comments || null,
-      saleDetails: cart.map(item => ({
-        saleDetailId: item.rowState === 'Added' ? null : item.saleDetailId,
+      saleDetails: activeCartItems.map(item => ({
+        saleDetailId: item.saleDetailId || null,
         productId: item.productId,
         retailPrice: item.retailPrice,
         quantity: item.quantity,
         discount: item.discount || 0,
-        rowState: item.rowState // Added / Modified / Deleted / Unchanged
+        rowState: item.rowState
       }))
     };
 
+    let response;
     if (isEditMode && currentSaleId) {
       saleData.saleId = currentSaleId;
       saleData.updatedDate = new Date().toISOString();
-
-      const response = await saleService.update( saleData);
-
-      if (response.success) {
-        Swal.fire('Success', 'Sale updated successfully!', 'success');
-
-        // ✅ Remove deleted items locally after backend update
-        setCart(cart.filter(item => item.rowState !== 'Deleted'));
-
-        setIsEditMode(false);
-        setCurrentSaleId(null);
-        setSelectedSalesperson('');
-        setComments('');
-        setSaleDate('');
-        if (onBackToRecords) onBackToRecords();
-      } else {
-        Swal.fire('Error', response.message || 'Failed to update sale', 'error');
-      }
+      response = await saleService.update(saleData);
     } else {
-      const response = await saleService.create(saleData);
-      if (response.success) {
-        Swal.fire('Success', 'Sale created successfully!', 'success');
-        setCart([]);
-        setSelectedSalesperson('');
-        setComments('');
-        setSaleDate('');
-        if (onBackToRecords) onBackToRecords();
-      } else {
-        Swal.fire('Error', response.message || 'Failed to create sale', 'error');
-      }
+      response = await saleService.create(saleData);
     }
+
+    if (response.success) {
+      Swal.fire('Success', isEditMode ? 'Sale updated successfully!' : 'Sale created successfully!', 'success');
+
+      // Reset cart rowState after save
+    // Completely clear the cart after saving
+setCart([]);
+
+
+      setIsEditMode(false);
+      setCurrentSaleId(null);
+      setSelectedSalesperson('');
+      setComments('');
+      setSaleDate('');
+      if (onBackToRecords) onBackToRecords();
+    } else {
+      Swal.fire('Error', response.message || 'Failed to save sale', 'error');
+    }
+
   } catch (error) {
     console.error('Save error:', error);
     Swal.fire('Error', error.response?.data?.message || error.message || 'Failed to save sale', 'error');
@@ -349,6 +344,7 @@ const handleSaveRecord = async () => {
     setLoading(false);
   }
 };
+
 
 
 
