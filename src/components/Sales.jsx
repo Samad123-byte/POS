@@ -61,9 +61,9 @@ useEffect(() => {
   const initializeComponent = async () => {
     setLoading(true);
     try {
-     const [spResponse, productResponse] = await Promise.all([
-  salespersonService.getAll(1, 100),
-  productService.getAll(1, 100)
+  const [spResponse, productResponse] = await Promise.all([
+  salespersonService.getAll(0, 999),
+  productService.getAll(0, 999)
 ]);
 
 const spList = spResponse.data || [];
