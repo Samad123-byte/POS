@@ -1,10 +1,10 @@
 import apiClient from './apiClient';
 
 export const productService = {
-  // ✅ FIXED: Send startIndex and endIndex directly in body
+
   getAll: async (startIndex = 0, endIndex = 9) => {
     const res = await apiClient.post('/Products/getAll', {
-      startIndex,  // ← Direct properties, not nested in params
+      startIndex,  
       endIndex
     });
     return res.data;

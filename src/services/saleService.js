@@ -4,7 +4,7 @@ export const saleService = {
   // ✅ FIXED: Now uses /Sales/getAll endpoint
   getAll: async (startIndex = 0, endIndex = 9) => {
     const res = await apiClient.post('/Sales/getAll', {
-      startIndex,  // ← Direct properties, not nested in params
+      startIndex, 
       endIndex
     });
     return res.data;
@@ -20,7 +20,7 @@ export const saleService = {
     return res.data;
   },
   
-  // ✅ FIXED: Now uses /Sales/create endpoint
+  
   create: async (sale) => {
     const res = await apiClient.post('/Sales/create', sale);
     return res.data;

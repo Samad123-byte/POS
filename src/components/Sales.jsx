@@ -296,6 +296,7 @@ const handleSaveRecord = async () => {
     const saleData = {
       salespersonId: parseInt(selectedSalesperson),
       total: calculateTotal(),
+
       saleDate: saleDate
         ? new Date(new Date(saleDate).getTime() - new Date().getTimezoneOffset() * 60000).toISOString()
         : null,

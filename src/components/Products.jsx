@@ -32,21 +32,19 @@ const Products = () => {
     });
   };
 
-  // ✅ Load products from backend with pagination
   useEffect(() => {
     loadProducts();
-  }, [currentPage]); // ✅ Re-fetch when page changes
+  }, [currentPage]);
 
   const loadProducts = async () => {
     setLoading(true);
     try {
-      // ✅ Calculate startIndex and endIndex (0-based)
-      const startIndex = (currentPage - 1) * pageSize; // Page 1: 0, Page 2: 10
-      const endIndex = startIndex + pageSize - 1;      // Page 1: 9, Page 2: 19
+    
+      const startIndex = (currentPage - 1) * pageSize; 
+      const endIndex = startIndex + pageSize - 1;   
 
       console.log('🔄 Fetching products:', { currentPage, startIndex, endIndex });
 
-      // ✅ Backend returns ONLY the requested page
       const response = await productService.getAll(startIndex, endIndex);
       
       console.log('✅ Response:', {
@@ -76,7 +74,7 @@ const Products = () => {
 
       if (res.success) {
         Swal.fire('Success', res.message || 'Product added successfully!', 'success');
-        setCurrentPage(1); // Go to first page
+        setCurrentPage(1); 
         loadProducts();
       } else {
         Swal.fire('Error', res.message || 'Failed to create product', 'error');
@@ -103,7 +101,7 @@ const Products = () => {
 
       if (res.success) {
         Swal.fire('Success', res.message || 'Product updated successfully!', 'success');
-        loadProducts(); // Reload current page
+        loadProducts(); 
       } else {
         Swal.fire('Error', res.message || 'Failed to update product', 'error');
       }
@@ -199,31 +197,7 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Debug Info */}
-        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
-          <div className="font-bold text-blue-800 mb-2"></div>
-          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Current Page</div>
-              <div className="text-xl font-bold">{currentPage}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Page Size</div>
-              <div className="text-xl font-bold">{pageSize}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Items on Page</div>
-              <div className="text-xl font-bold">{products.length}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Total Records</div>
-              <div className="text-xl font-bold">{totalRecords}</div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-blue-800">
-           
-          </div>
-        </div>
+        
 
         {loading ? (
           <div className="bg-white rounded-2xl shadow-xl p-12">

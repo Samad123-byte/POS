@@ -139,45 +139,7 @@ const Records = ({ onEditSale }) => {
           </div>
         </div>
 
-        {/* Search Bar */}
-        <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <div className="relative">
-            <Search className="absolute left-4 top-3.5 text-gray-400" size={20} />
-            <input 
-              type="text" 
-              placeholder="Search by Sale ID, Salesperson, or Comments..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full border-2 border-gray-300 rounded-xl pl-12 pr-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-            />
-          </div>
-        </div>
-
-        {/* Debug Info */}
-        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
-          <div className="font-bold text-blue-800 mb-2"></div>
-          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Current Page</div>
-              <div className="text-xl font-bold">{currentPage}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Page Size</div>
-              <div className="text-xl font-bold">{pageSize}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Items on Page</div>
-              <div className="text-xl font-bold">{sales.length}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Total Records</div>
-              <div className="text-xl font-bold">{totalRecords}</div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-blue-800">
-           
-          </div>
-        </div>
+       
 
         {loading ? (
           <div className="bg-white rounded-2xl shadow-xl p-12">

@@ -184,32 +184,6 @@ const Salesperson = () => {
           </div>
         </div>
 
-        {/* Debug Info */}
-        <div className="bg-blue-50 border-2 border-blue-300 rounded-xl p-4 mb-6">
-          <div className="font-bold text-blue-800 mb-2"></div>
-          <div className="grid grid-cols-4 gap-4 text-sm text-blue-900">
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Current Page</div>
-              <div className="text-xl font-bold">{currentPage}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Page Size</div>
-              <div className="text-xl font-bold">{pageSize}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Items on Page</div>
-              <div className="text-xl font-bold">{salespersons.length}</div>
-            </div>
-            <div className="bg-white p-3 rounded-lg">
-              <div className="text-xs text-gray-600">Total Records</div>
-              <div className="text-xl font-bold">{totalRecords}</div>
-            </div>
-          </div>
-          <div className="mt-3 text-xs text-blue-800">
-            <br/>
-           
-          </div>
-        </div>
 
         {loading ? (
           <div className="bg-white rounded-2xl shadow-xl p-12">
